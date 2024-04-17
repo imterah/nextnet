@@ -50,6 +50,8 @@ model User {
   email String  @unique
   name  String?
 
+  password String // Will be hashed using bcrypt
+
   rootToken   String?
   permissions Permission[]
 }
