@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model DesinationProvider {
+  id Int @id @default(autoincrement())
+
+  name        String
+  description String?
+
+  backend           String
+  connectionDetails String
+}
+
+model ForwardRule {
+  id Int @id @default(autoincrement())
+
+  name        String
+  description String?
+
+  sourceIP   String
+  sourcePort Int
+
+  destIP   String
+  destPort Int
+
+  destProviderID Int
+  enabled        Boolean
+}
+
+model Permission {
+  permissionID String  @unique
+  has          Boolean
+
+  user   User @relation(fields: [userID], references: [id])
+  userID Int  @id @default(autoincrement())
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  email String  @unique
+  name  String?
+
+  rootToken   String?
+  permissions Permission[]
+}
