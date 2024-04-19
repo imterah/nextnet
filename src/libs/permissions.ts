@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import type { SessionToken } from "./types.js";
 
 export const permissionListDisabled: Record<string, boolean> = {
   "routes.add":         false,
@@ -29,14 +30,44 @@ for (const index of Object.keys(permissionListEnabled)) {
   permissionListEnabled[index] = true;
 }
 
-export async function hasPermission(permission: string, uid: number, prisma: PrismaClient): Promise<boolean> {
-  const permissionNode = await prisma.permission.findFirst({
-    where: {
-      userID: uid,
-      permission
-    }
-  });
+export async function hasPermission(permissionList: string[], uid: number, prisma: PrismaClient): Promise<boolean> {
+  for (const permission of permissionList) {
+    const permissionNode = await prisma.permission.findFirst({
+      where: {
+        userID: uid,
+        permission
+      }
+    });
 
-  if (!permissionNode) return false;
-  return permissionNode.has;
+    if (!permissionNode || !permissionNode.has) return false;
+  }
+
+  return true;
+}
+
+export async function hasPermissionByToken(permissionList: string[], token: string, tokens: Record<number, SessionToken[]>, prisma: PrismaClient): Promise<boolean> {
+  let userID = -1;
+
+  for (const otherTokenKey of Object.keys(tokens)) {
+    const otherTokenList = tokens[parseInt(otherTokenKey)];
+
+    for (const otherTokenIndex in otherTokenList) {
+      const otherToken = otherTokenList[otherTokenIndex];
+
+      if (otherToken.token == token) {
+        if (otherToken.expiresAt < otherToken.createdAt + (otherToken.createdAt - Date.now())) {
+          otherTokenList.splice(parseInt(otherTokenIndex), 1);
+          continue;
+        } else {
+          userID = parseInt(otherTokenKey);
+        }
+      }
+    }
+  }
+
+  // Fine, we'll look up for global tokens...
+
+  if (userID == -1) return false;
+
+  return true;
 }

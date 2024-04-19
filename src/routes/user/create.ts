@@ -7,8 +7,6 @@ import { permissionListEnabled } from "../../libs/permissions.js";
 import { generateToken } from "../../libs/generateToken.js";
 
 export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Record<number, SessionToken[]>, options: ServerOptions) {
-  // TODO: Permissions
-  
   /**
    * Creates a new user account to use, only if it is enabled.
    */
@@ -63,9 +61,7 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
           permission: string,
           has: boolean
         }[]
-      },
-
-      rootToken: null
+      }
     };
 
     // TODO: There's probably a faster way to pull this off, but I'm lazy
@@ -79,6 +75,7 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
     };
 
     if (options.allowUnsafeGlobalTokens) {
+      // @ts-ignore
       userData.rootToken = generateToken() as unknown as null;
     }
 
