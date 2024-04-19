@@ -9,7 +9,7 @@ export const permissionListDisabled: Record<string, boolean> = {
   "routes.edit":        false,
   "routes.visible":     false,
 
-  "backends.add":       false,
+  "backends.add":       false,  
   "backends.remove":    false,
   "backends.start":     false,
   "backends.stop":      false,
@@ -48,6 +48,7 @@ export async function hasPermission(permissionList: string[], uid: number, prism
 export async function hasPermissionByToken(permissionList: string[], token: string, tokens: Record<number, SessionToken[]>, prisma: PrismaClient): Promise<boolean> {
   let userID = -1;
 
+  // Look up in our currently authenticated users
   for (const otherTokenKey of Object.keys(tokens)) {
     const otherTokenList = tokens[parseInt(otherTokenKey)];
 
@@ -66,8 +67,18 @@ export async function hasPermissionByToken(permissionList: string[], token: stri
   }
 
   // Fine, we'll look up for global tokens...
+  // FIXME: Could this be more efficient? IDs are sequential in SQL I think
+  if (userID == -1) {
+    const allUsers = await prisma.user.findMany();
+  
+    for (const user of allUsers) {
+      if (user.rootToken == token) userID = user.id;
+    };
+  }
 
+  // If we are STILL -1, we give up.
   if (userID == -1) return false;
 
-  return true;
+  // Now we can test permissions!
+  return await hasPermission(permissionList, userID, prisma);
 }
