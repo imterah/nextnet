@@ -37,11 +37,13 @@ model ForwardRule {
 }
 
 model Permission {
-  permissionID String  @unique
+  id Int @id @default(autoincrement())
+  
+  permission   String
   has          Boolean
 
   user   User @relation(fields: [userID], references: [id])
-  userID Int  @id @default(autoincrement())
+  userID Int
 }
 
 model User {
