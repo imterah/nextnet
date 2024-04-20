@@ -1,0 +1,23 @@
+meta {
+  name: Create User
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://127.0.0.1:3000/api/v1/backends/create
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "134597ea81976ac0799824ea3f345cfd2e31b9febaeef10ba93817fa562862d69e88d8e3acd58ebdd1345a1fd11f38b7153c5d8516edce67aaebce55fc9cde",
+    "name": "PortCopier Route",
+    "description": "This is a test route for portcopier.",
+    "backend": "PortCopier",
+    "connectionDetails": {
+      "funny": true
+    }
+  }
+}
