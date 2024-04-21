@@ -11,6 +11,7 @@ import { route as backendCreate } from "./routes/backends/create.js";
 
 import { route as forwardCreate } from "./routes/forward/create.js";
 
+import { route as userRemove } from "./routes/user/remove.js";
 import { route as userCreate } from "./routes/user/create.js";
 import { route as userLogin } from "./routes/user/login.js";
 
@@ -39,11 +40,12 @@ const fastify = Fastify({
 });
 
 getPermissions(fastify, prisma, sessionTokens, serverOptions);
-
+ 
 backendCreate(fastify, prisma, sessionTokens, serverOptions);
 
 forwardCreate(fastify, prisma, sessionTokens, serverOptions);
 
+userRemove(fastify, prisma, sessionTokens, serverOptions);
 userCreate(fastify, prisma, sessionTokens, serverOptions);
 userLogin(fastify, prisma, sessionTokens, serverOptions);
 

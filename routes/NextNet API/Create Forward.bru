@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://127.0.0.1:3000/api/v1/backends/create
+  url: http://127.0.0.1:3000/api/v1/forward/create
   body: json
   auth: none
 }
@@ -13,11 +13,14 @@ post {
 body:json {
   {
     "token": "5e2cb92a338a832d385790861312eb85d69f46f82317bfa984ac5e3517368ab5a827897b0f9775a9181b02fa3b9cffed7e59e5b3111d5bdc37f729156caf5f",
-    "name": "PortCopier Route",
+    "name": "Test Route",
     "description": "This is a test route for portcopier.",
-    "backend": "PortCopier",
-    "connectionDetails": {
-      "funny": true
-    }
+    
+    "sourceIP": "127.0.0.1",
+    "sourcePort": "8000",
+    
+    "destinationPort": "9000",
+    
+    "providerID": "1"
   }
 }
