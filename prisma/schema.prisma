@@ -13,9 +13,8 @@ datasource db {
 model DesinationProvider {
   id Int @id @default(autoincrement())
 
-  name        String
-  description String?
-
+  name              String
+  description       String?
   backend           String
   connectionDetails String
 }
@@ -23,15 +22,12 @@ model DesinationProvider {
 model ForwardRule {
   id Int @id @default(autoincrement())
 
-  name        String
-  description String?
-
-  sourceIP   String
-  sourcePort Int
-
-  destIP   String
-  destPort Int
-
+  name           String
+  description    String?
+  sourceIP       String
+  sourcePort     Int
+  destIP         String
+  destPort       Int
   destProviderID Int
   enabled        Boolean
 }
@@ -41,21 +37,17 @@ model Permission {
   
   permission   String
   has          Boolean
-
-  user   User @relation(fields: [userID], references: [id])
-  userID Int
+  user         User @relation(fields: [userID], references: [id])
+  userID       Int
 }
 
 model User {
   id Int @id @default(autoincrement())
 
-  email String  @unique
-  name  String
-
-  password String // Will be hashed using bcrypt
-
+  email                String  @unique
+  name                 String
+  password             String // Will be hashed using bcrypt
   rootToken            String?
   isRootServiceAccount Boolean?
-  
-  permissions Permission[]
+  permissions          Permission[]
 }
