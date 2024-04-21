@@ -28,7 +28,7 @@
   "updateRemoteUserUID": false,
 
   // build development environment on creation, make sure you already have shell.nix
-  "onCreateCommand": "nix-shell",
+  "onCreateCommand": "nix-shell --command 'echo done building nix dev environment'",
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   "forwardPorts": [
