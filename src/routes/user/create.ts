@@ -76,7 +76,9 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
 
     if (options.allowUnsafeGlobalTokens) {
       // @ts-ignore
-      userData.rootToken = generateToken() as unknown as null;
+      userData.rootToken = generateToken();
+      // @ts-ignore
+      userData.isRootServiceAccount = true;
     }
 
     const userCreateResults = await prisma.user.create({

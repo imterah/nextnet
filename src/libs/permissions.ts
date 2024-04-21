@@ -69,7 +69,11 @@ export async function hasPermissionByToken(permissionList: string[], token: stri
   // Fine, we'll look up for global tokens...
   // FIXME: Could this be more efficient? IDs are sequential in SQL I think
   if (userID == -1) {
-    const allUsers = await prisma.user.findMany();
+    const allUsers = await prisma.user.findMany({
+      where: {
+        isRootServiceAccount: true
+      }
+    });
   
     for (const user of allUsers) {
       if (user.rootToken == token) userID = user.id;
