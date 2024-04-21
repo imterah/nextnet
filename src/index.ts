@@ -5,6 +5,8 @@ import Fastify from "fastify";
 
 import { ServerOptions, SessionToken } from "./libs/types.js";
 
+import { route as getPermissions } from "./routes/getPermissions.js";
+
 import { route as backendCreate } from "./routes/backends/create.js";
 
 import { route as forwardCreate } from "./routes/forward/create.js";
@@ -35,6 +37,8 @@ const sessionTokens: Record<number, SessionToken[]> = {};
 const fastify = Fastify({
   logger: true
 });
+
+getPermissions(fastify, prisma, sessionTokens, serverOptions);
 
 backendCreate(fastify, prisma, sessionTokens, serverOptions);
 

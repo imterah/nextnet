@@ -45,7 +45,7 @@ export async function hasPermission(permissionList: string[], uid: number, prism
   return true;
 }
 
-export async function hasPermissionByToken(permissionList: string[], token: string, tokens: Record<number, SessionToken[]>, prisma: PrismaClient): Promise<boolean> {
+export async function getUID(token: string, tokens: Record<number, SessionToken[]>, prisma: PrismaClient): Promise<number> {
   let userID = -1;
 
   // Look up in our currently authenticated users
@@ -80,9 +80,10 @@ export async function hasPermissionByToken(permissionList: string[], token: stri
     };
   }
 
-  // If we are STILL -1, we give up.
-  if (userID == -1) return false;
+  return userID;
+}
 
-  // Now we can test permissions!
+export async function hasPermissionByToken(permissionList: string[], token: string, tokens: Record<number, SessionToken[]>, prisma: PrismaClient): Promise<boolean> {
+  const userID = await getUID(token, tokens, prisma);
   return await hasPermission(permissionList, userID, prisma);
 }

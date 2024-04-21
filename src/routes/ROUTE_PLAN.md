@@ -2,6 +2,7 @@
 - /api/v1/users/create
 - /api/v1/users/login
 - /api/v1/users/remove
+- /api/v1/users/search
 - /api/v1/backends/create
 - /api/v1/backends/remove
 - /api/v1/backends/modify
@@ -10,3 +11,4 @@
 - /api/v1/routes/remove
 - /api/v1/routes/modify
 - /api/v1/routes/search
+- /api/v1/getPermissions
