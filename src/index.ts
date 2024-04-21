@@ -4,7 +4,10 @@ import { PrismaClient } from '@prisma/client';
 import Fastify from "fastify";
 
 import { ServerOptions, SessionToken } from "./libs/types.js";
+
 import { route as backendCreate } from "./routes/backends/create.js";
+
+import { route as forwardCreate } from "./routes/forward/create.js";
 
 import { route as userCreate } from "./routes/user/create.js";
 import { route as userLogin } from "./routes/user/login.js";
@@ -34,6 +37,8 @@ const fastify = Fastify({
 });
 
 backendCreate(fastify, prisma, sessionTokens, serverOptions);
+
+forwardCreate(fastify, prisma, sessionTokens, serverOptions);
 
 userCreate(fastify, prisma, sessionTokens, serverOptions);
 userLogin(fastify, prisma, sessionTokens, serverOptions);

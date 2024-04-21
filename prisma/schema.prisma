@@ -26,7 +26,6 @@ model ForwardRule {
   description    String?
   sourceIP       String
   sourcePort     Int
-  destIP         String
   destPort       Int
   destProviderID Int
   enabled        Boolean
