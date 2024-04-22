@@ -1,7 +1,7 @@
 {
-  "name": "typescript-base",
-  "version": "1.0.0",
-  "description": "Base TypeScript template to use",
+  "name": "nextnet",
+  "version": "0.1.0",
+  "description": "Yet another dashboard to manage portforwarding technologies",
   "main": "index.js",
   "type": "module",
   "scripts": {
