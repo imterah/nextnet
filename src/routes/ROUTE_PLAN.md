@@ -3,13 +3,15 @@
 - [x] /api/v1/users/login
 - [x] /api/v1/users/remove
 - [ ] /api/v1/users/modify 
-- [x] /api/v1/users/search
+- [x] /api/v1/users/lookup
 - [x] /api/v1/backends/create
 - [x] /api/v1/backends/remove
 - [ ] /api/v1/backends/modify
-- [ ] /api/v1/backends/search
+- [x] /api/v1/backends/lookup
 - [x] /api/v1/routes/create
 - [x] /api/v1/routes/remove
 - [ ] /api/v1/routes/modify
-- [ ] /api/v1/routes/search
+- [x] /api/v1/routes/lookup
+- [ ] /api/v1/routes/start
+- [ ] /api/v1/routes/stop
 - [x] /api/v1/getPermissions
