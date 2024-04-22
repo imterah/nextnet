@@ -9,9 +9,11 @@ import { route as getPermissions } from "./routes/getPermissions.js";
 
 import { route as backendCreate } from "./routes/backends/create.js";
 import { route as backendRemove } from "./routes/backends/remove.js";
+import { route as backendLookup } from "./routes/backends/lookup.js";
 
 import { route as forwardCreate } from "./routes/forward/create.js";
 import { route as forwardRemove } from "./routes/forward/remove.js";
+import { route as forwardLookup } from "./routes/forward/lookup.js";
 
 import { route as userCreate } from "./routes/user/create.js";
 import { route as userRemove } from "./routes/user/remove.js";
@@ -46,9 +48,11 @@ getPermissions(fastify, prisma, sessionTokens, serverOptions);
  
 backendCreate(fastify, prisma, sessionTokens, serverOptions);
 backendRemove(fastify, prisma, sessionTokens, serverOptions);
+backendLookup(fastify, prisma, sessionTokens, serverOptions);
 
 forwardCreate(fastify, prisma, sessionTokens, serverOptions);
 forwardRemove(fastify, prisma, sessionTokens, serverOptions);
+forwardLookup(fastify, prisma, sessionTokens, serverOptions);
 
 userCreate(fastify, prisma, sessionTokens, serverOptions);
 userRemove(fastify, prisma, sessionTokens, serverOptions);

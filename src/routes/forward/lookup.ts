@@ -12,25 +12,25 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
   /**
    * Creates a new route to use
    */
-  fastify.post("/api/v1/forward/create", {
+  fastify.post("/api/v1/forward/lookup", {
     schema: {
       body: {
         type: "object",
-        required: ["token", "name", "sourceIP", "sourcePort", "destinationPort", "providerID"],
-
+        required: ["token"],
+        
         properties: {
-          token: { type: "string" },
+          token:       { type: "string" },
+          id:          { type: "number" },
 
-          name: { type: "string" },
+          name:        { type: "string" },
           description: { type: "string" },
 
-          sourceIP: { type: "string" },
+          sourceIP:   { type: "string" },
           sourcePort: { type: "number" },
-
-          destinationPort: { type: "number" },
+          destPort:   { type: "number" },
 
           providerID: { type: "number" },
-          autoStart: { type: "boolean" }
+          autoStart:  { type: "boolean" }
         }
       }
     }
@@ -39,39 +39,30 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
     const body: {
       token: string,
 
-      name: string,
+      id?: number,
+      name?: string,
       description?: string,
 
-      sourceIP: string,
-      sourcePort: number,
+      sourceIP?: string,
+      sourcePort?: number,
 
-      destinationPort: number,
+      destinationPort?: number,
 
-      providerID: number,
-
+      providerID?: number,
       autoStart?: boolean
     } = req.body;
 
     if (!await hasPermission(body.token, [
-      "routes.add"
+      "routes.visible" // wtf?
     ])) {
       return res.status(403).send({
         error: "Unauthorized"
       });
     };
 
-    const lookupIDForDestProvider = await prisma.desinationProvider.findUnique({
+    const forwardRules = await prisma.forwardRule.findMany({
       where: {
-        id: body.providerID
-      }
-    });
-
-    if (!lookupIDForDestProvider) return res.status(400).send({
-      error: "Could not find provider"
-    });
-
-    await prisma.forwardRule.create({
-      data: {
+        id: body.id,
         name: body.name,
         description: body.description,
 
@@ -81,13 +72,25 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
         destPort: body.destinationPort,
 
         destProviderID: body.providerID,
-
-        enabled: Boolean(body.autoStart)
+        enabled: body.autoStart
       }
     });
 
     return {
-      success: true
-    }
+      success: true,
+      data: forwardRules.map((i) => ({
+        id: i.id,
+        name: i.name,
+        description: i.description,
+
+        sourceIP: i.sourceIP,
+        sourcePort: i.sourcePort,
+
+        destPort: i.destPort,
+
+        providerID: i.destProviderID,
+        autoStart: i.enabled // TODO: Add enabled flag in here to see if we're running or not
+      }))
+    };
   });
 }

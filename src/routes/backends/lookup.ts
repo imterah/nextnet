@@ -9,18 +9,21 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
     return hasPermissionByToken(permissionList, token, tokens, prisma);
   };
 
-  fastify.post("/api/v1/users/lookup", {
+  /**
+   * Creates a new route to use
+   */
+  fastify.post("/api/v1/backends/lookup", {
     schema: {
       body: {
         type: "object",
         required: ["token"],
 
         properties: {
-          token:            { type: "string" },
-          id:               { type: "number" },
-          name:             { type: "string" },
-          email:            { type: "string" },
-          isServiceAccount: { type: "boolean" }
+          token:             { type: "string" },
+          id:                { type: "number" },
+          name:              { type: "string" },
+          description:       { type: "string" },
+          backend:           { type: "string" }
         }
       }
     }
@@ -30,33 +33,39 @@ export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Re
       token: string,
       id?: number,
       name?: string,
-      email?: string,
-      isServiceAccount?: boolean
+      description?: string,
+      backend?: string
     } = req.body;
 
     if (!await hasPermission(body.token, [
-      "users.lookup"
+      "backends.visible" // wtf?
     ])) {
       return res.status(403).send({
         error: "Unauthorized"
       });
     };
 
-    const users = await prisma.user.findMany({
+    const canSeeSecrets = await hasPermission(body.token, [
+      "backends.secretVis"
+    ]);
+    
+    const backends = await prisma.desinationProvider.findMany({
       where: {
         id: body.id,
         name: body.name,
-        email: body.email,
-        isRootServiceAccount: body.isServiceAccount
+        description: body.description,
+        backend: body.backend
       }
     });
 
     return {
       success: true,
-      data: users.map((i) => ({
+      data: backends.map((i) => ({
         name: i.name,
-        email: i.email,
-        isServiceAccount: i.isRootServiceAccount
+        description: i.description,
+
+        backend: i.backend,
+        connectionDetails: canSeeSecrets ? i.connectionDetails : ""
       }))
     }
   });
