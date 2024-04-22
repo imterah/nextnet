@@ -1,11 +1,11 @@
 meta {
-  name: Lookup Backend
+  name: Lookup
   type: http
   seq: 3
 }
 
 post {
-  url: http://127.0.0.1:3000/api/v1/backends/remove
+  url: http://127.0.0.1:3000/api/v1/forward/remove
   body: json
   auth: none
 }
