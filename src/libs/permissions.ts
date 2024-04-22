@@ -9,7 +9,7 @@ export const permissionListDisabled: Record<string, boolean> = {
   "routes.edit":        false,
   "routes.visible":     false,
 
-  "backends.add":       false,  
+  "backends.add":       false,
   "backends.remove":    false,
   "backends.start":     false,
   "backends.stop":      false,
@@ -17,10 +17,12 @@ export const permissionListDisabled: Record<string, boolean> = {
   "backends.visible":   false,
   "backends.secretVis": false,
 
-  "permissions.see":    false, 
+  "permissions.see":    false,
 
   "users.add":          false,
-  "users.remove":       false
+  "users.remove":       false,
+  "users.lookup":       false,
+  "users.edit":         false,
 };
 
 // FIXME: This solution fucking sucks.

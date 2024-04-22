@@ -1,0 +1,18 @@
+meta {
+  name: Lookup User
+  type: http
+  seq: 7
+}
+
+post {
+  url: http://127.0.0.1:3000/api/v1/users/lookup
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "5e2cb92a338a832d385790861312eb85d69f46f82317bfa984ac5e3517368ab5a827897b0f9775a9181b02fa3b9cffed7e59e5b3111d5bdc37f729156caf5f",
+    "name": "Greyson Hofer"
+  }
+}
