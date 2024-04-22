@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 if [ ! -d ".tmp" ]; then
   echo "Hello and welcome to the NextNet project! Please wait while I initialize things for you..."
   cp dev.env .env
