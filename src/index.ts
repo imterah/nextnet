@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import Fastify from "fastify";
 
 import { ServerOptions, SessionToken } from "./libs/types.js";
+import type { BackendInterface } from "./backendimpl/base.js";
 
 import { route as getPermissions } from "./routes/getPermissions.js";
 
@@ -39,6 +40,7 @@ const serverOptions: ServerOptions = {
 };
 
 const sessionTokens: Record<number, SessionToken[]> = {};
+const backends: Record<number, BackendInterface> = {};
 
 const fastify = Fastify({
   logger: true
@@ -46,13 +48,13 @@ const fastify = Fastify({
 
 getPermissions(fastify, prisma, sessionTokens, serverOptions);
  
-backendCreate(fastify, prisma, sessionTokens, serverOptions);
-backendRemove(fastify, prisma, sessionTokens, serverOptions);
-backendLookup(fastify, prisma, sessionTokens, serverOptions);
+backendCreate(fastify, prisma, sessionTokens, serverOptions, backends);
+backendRemove(fastify, prisma, sessionTokens, serverOptions, backends);
+backendLookup(fastify, prisma, sessionTokens, serverOptions, backends);
 
-forwardCreate(fastify, prisma, sessionTokens, serverOptions);
-forwardRemove(fastify, prisma, sessionTokens, serverOptions);
-forwardLookup(fastify, prisma, sessionTokens, serverOptions);
+forwardCreate(fastify, prisma, sessionTokens, serverOptions, backends);
+forwardRemove(fastify, prisma, sessionTokens, serverOptions, backends);
+forwardLookup(fastify, prisma, sessionTokens, serverOptions, backends);
 
 userCreate(fastify, prisma, sessionTokens, serverOptions);
 userRemove(fastify, prisma, sessionTokens, serverOptions);
