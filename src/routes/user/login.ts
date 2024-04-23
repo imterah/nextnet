@@ -1,11 +1,15 @@
-import type { PrismaClient } from "@prisma/client";
-import type { FastifyInstance } from "fastify";
 import { compare } from "bcrypt";
 
-import { ServerOptions, SessionToken } from "../../libs/types.js";
 import { generateToken } from "../../libs/generateToken.js";
+import type { RouteOptions } from "../../libs/types.js";
 
-export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Record<number, SessionToken[]>, options: ServerOptions) {
+export function route(routeOptions: RouteOptions) {
+  const {
+    fastify,
+    prisma,
+    tokens
+  } = routeOptions;
+
   /**
    * Logs in to a user account.
    */

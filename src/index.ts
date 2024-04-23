@@ -3,7 +3,7 @@ import process from "node:process";
 import { PrismaClient } from '@prisma/client';
 import Fastify from "fastify";
 
-import { ServerOptions, SessionToken } from "./libs/types.js";
+import type { ServerOptions, SessionToken, RouteOptions } from "./libs/types.js";
 import type { BackendInterface } from "./backendimpl/base.js";
 
 import { route as getPermissions } from "./routes/getPermissions.js";
@@ -46,20 +46,29 @@ const fastify = Fastify({
   logger: true
 });
 
-getPermissions(fastify, prisma, sessionTokens, serverOptions);
+const routeOptions: RouteOptions = {
+  fastify: fastify,
+  prisma: prisma,
+  tokens: sessionTokens,
+  options: serverOptions,
+
+  backends: backends
+};
+
+getPermissions(routeOptions);
  
-backendCreate(fastify, prisma, sessionTokens, serverOptions, backends);
-backendRemove(fastify, prisma, sessionTokens, serverOptions, backends);
-backendLookup(fastify, prisma, sessionTokens, serverOptions, backends);
+backendCreate(routeOptions);
+backendRemove(routeOptions);
+backendLookup(routeOptions);
 
-forwardCreate(fastify, prisma, sessionTokens, serverOptions, backends);
-forwardRemove(fastify, prisma, sessionTokens, serverOptions, backends);
-forwardLookup(fastify, prisma, sessionTokens, serverOptions, backends);
+forwardCreate(routeOptions);
+forwardRemove(routeOptions);
+forwardLookup(routeOptions);
 
-userCreate(fastify, prisma, sessionTokens, serverOptions);
-userRemove(fastify, prisma, sessionTokens, serverOptions);
-userLookup(fastify, prisma, sessionTokens, serverOptions);
-userLogin(fastify, prisma, sessionTokens, serverOptions);
+userCreate(routeOptions);
+userRemove(routeOptions);
+userLookup(routeOptions);
+userLogin(routeOptions);
 
 // Run the server!
 try {

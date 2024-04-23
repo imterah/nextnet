@@ -1,3 +1,8 @@
+import type { PrismaClient } from "@prisma/client";
+import type { FastifyInstance } from "fastify";
+
+import type { BackendInterface } from "../backendimpl/base.js";
+
 export type ServerOptions = {
   isSignupEnabled: boolean;
   isSignupAsAdminEnabled: boolean;
@@ -11,4 +16,13 @@ export type SessionToken = {
   expiresAt: number, // Should be (createdAt + (30 minutes))
   
   token: string
+};
+
+export type RouteOptions = {
+  fastify: FastifyInstance,
+  prisma: PrismaClient,
+  tokens: Record<number, SessionToken[]>,
+  
+  options: ServerOptions,
+  backends: Record<number, BackendInterface>
 };

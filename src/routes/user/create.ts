@@ -1,12 +1,18 @@
-import type { PrismaClient } from "@prisma/client";
-import type { FastifyInstance } from "fastify";
 import { hash } from "bcrypt";
 
-import { ServerOptions, SessionToken } from "../../libs/types.js";
 import { permissionListEnabled } from "../../libs/permissions.js";
 import { generateToken } from "../../libs/generateToken.js";
 
-export function route(fastify: FastifyInstance, prisma: PrismaClient, tokens: Record<number, SessionToken[]>, options: ServerOptions) {
+import type { RouteOptions } from "../../libs/types.js";
+
+export function route(routeOptions: RouteOptions) {
+  const {
+    fastify,
+    prisma,
+    tokens,
+    options
+  } = routeOptions;
+
   /**
    * Creates a new user account to use, only if it is enabled.
    */
