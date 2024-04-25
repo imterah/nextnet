@@ -16,7 +16,8 @@ export interface BackendInterface {
     addConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void;
     removeConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void;
  
-    run(): Promise<void>,
+    start(): Promise<boolean>,
+    stop(): Promise<boolean>,
 
     getAllConnections(): {
       sourceIP: string,
