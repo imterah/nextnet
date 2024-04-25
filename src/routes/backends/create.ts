@@ -47,7 +47,7 @@ export function route(routeOptions: RouteOptions) {
       });
     };
 
-    await prisma.desinationProvider.create({
+    const backend = await prisma.desinationProvider.create({
       data: {
         name: body.name,
         description: body.description,
@@ -58,7 +58,8 @@ export function route(routeOptions: RouteOptions) {
     });
 
     return {
-      success: true
+      success: true,
+      id: backend.id
     };
   });
 }

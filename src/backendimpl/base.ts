@@ -3,6 +3,10 @@ export type ParameterReturnedValue = {
   message?: string
 }
 
+export type ConnectedClients = {
+  
+};
+
 export interface BackendInterface {
   new(): {
     addConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void;
@@ -14,6 +18,9 @@ export interface BackendInterface {
       destPort: number,
       protocol: "tcp" | "udp"
     }[];
+
+    status: "running" | "stopped" | "starting";
+    logs: string[],
   },
 
   checkParametersConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): ParameterReturnedValue;
