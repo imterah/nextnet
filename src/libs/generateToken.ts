@@ -9,6 +9,12 @@ export function generateRandomData(length: number): string {
 
   for (let i = 0; i < length; i += 2) {
     const randomNumber = getRandomInt(0, 255);
+    
+    if (randomNumber == 0) {
+      i -= 2;
+      continue;
+    }
+
     newString += randomNumber.toString(16);
   }
 
