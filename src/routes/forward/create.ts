@@ -19,13 +19,15 @@ export function route(routeOptions: RouteOptions) {
     schema: {
       body: {
         type: "object",
-        required: ["token", "name", "sourceIP", "sourcePort", "destinationPort", "providerID"],
+        required: ["token", "name", "protocol", "sourceIP", "sourcePort", "destinationPort", "providerID"],
 
         properties: {
           token: { type: "string" },
 
           name: { type: "string" },
           description: { type: "string" },
+
+          protocol: { type: "string" },
 
           sourceIP: { type: "string" },
           sourcePort: { type: "number" },
@@ -45,6 +47,8 @@ export function route(routeOptions: RouteOptions) {
       name: string,
       description?: string,
 
+      protocol: "tcp" | "udp",
+
       sourceIP: string,
       sourcePort: number,
 
@@ -54,6 +58,12 @@ export function route(routeOptions: RouteOptions) {
 
       autoStart?: boolean
     } = req.body;
+
+    if (body.protocol != "tcp" && body.protocol != "udp") {
+      return res.status(400).send({
+        error: "Body protocol field must be either tcp or udp"
+      });
+    };
 
     if (!await hasPermission(body.token, [
       "routes.add"
@@ -73,10 +83,12 @@ export function route(routeOptions: RouteOptions) {
       error: "Could not find provider"
     });
 
-    await prisma.forwardRule.create({
+    const forwardRule = await prisma.forwardRule.create({
       data: {
         name: body.name,
         description: body.description,
+
+        protocol: body.protocol,
 
         sourceIP: body.sourceIP,
         sourcePort: body.sourcePort,
@@ -90,7 +102,8 @@ export function route(routeOptions: RouteOptions) {
     });
 
     return {
-      success: true
+      success: true,
+      id: forwardRule.id
     }
   });
 }

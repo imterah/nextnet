@@ -24,6 +24,7 @@ model ForwardRule {
 
   name           String
   description    String?
+  protocol       String
   sourceIP       String
   sourcePort     Int
   destPort       Int

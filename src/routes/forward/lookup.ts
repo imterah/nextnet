@@ -26,14 +26,15 @@ export function route(routeOptions: RouteOptions) {
           id:          { type: "number" },
 
           name:        { type: "string" },
+          protocol:    { type: "string" },
           description: { type: "string" },
 
-          sourceIP:   { type: "string" },
-          sourcePort: { type: "number" },
-          destPort:   { type: "number" },
+          sourceIP:    { type: "string" },
+          sourcePort:  { type: "number" },
+          destPort:    { type: "number" },
 
-          providerID: { type: "number" },
-          autoStart:  { type: "boolean" }
+          providerID:  { type: "number" },
+          autoStart:   { type: "boolean" }
         }
       }
     }
@@ -46,6 +47,8 @@ export function route(routeOptions: RouteOptions) {
       name?: string,
       description?: string,
 
+      protocol?: "tcp" | "udp",
+
       sourceIP?: string,
       sourcePort?: number,
 
@@ -54,6 +57,12 @@ export function route(routeOptions: RouteOptions) {
       providerID?: number,
       autoStart?: boolean
     } = req.body;
+
+    if (body.protocol && body.protocol != "tcp" && body.protocol != "udp") {
+      return res.status(400).send({
+        error: "Protocol specified in body must be either 'tcp' or 'udp'"
+      })
+    }
 
     if (!await hasPermission(body.token, [
       "routes.visible" // wtf?
