@@ -1,6 +1,7 @@
-let
-  pkgs = import (fetchTarball ("channel:nixpkgs-unstable")) { };
-in
+{
+  pkgs ? import <nixpkgs> { },
+}:
+
 pkgs.mkShell {
   buildInputs = [ pkgs.nodejs pkgs.openssl pkgs.postgresql pkgs.lsof ];
   shellHook = ''
