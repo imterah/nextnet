@@ -1,8 +1,6 @@
 {
   pkgs ? import <nixpkgs> { },
-}:
-
-pkgs.mkShell {
+}: pkgs.mkShell {
   buildInputs = [ pkgs.nodejs pkgs.openssl pkgs.postgresql pkgs.lsof ];
   shellHook = ''
     export PRISMA_QUERY_ENGINE_BINARY=${pkgs.prisma-engines}/bin/query-engine
