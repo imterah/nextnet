@@ -5,7 +5,8 @@ export function route(routeOptions: RouteOptions) {
   const {
     fastify,
     prisma,
-    tokens
+    tokens,
+    backends
   } = routeOptions;
 
   function hasPermission(token: string, permissionList: string[]): Promise<boolean> {
@@ -41,6 +42,21 @@ export function route(routeOptions: RouteOptions) {
         error: "Unauthorized"
       });
     };
+
+    if (!backends[body.id]) {
+      return res.status(400).send({
+        error: "Backend not found"
+      });
+    };
+
+    // Unload the backend
+    if (!await backends[body.id].stop()) {
+      return res.status(400).send({
+        error: "Failed to stop backend! Please report this issue."
+      })
+    }
+
+    delete backends[body.id];
 
     await prisma.desinationProvider.delete({
       where: {

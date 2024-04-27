@@ -20,7 +20,7 @@ export function route(routeOptions: RouteOptions) {
         required: ["email", "password"],
 
         properties: {
-          email: { type: "string" },
+          email:    { type: "string" },
           password: { type: "string" }
         }
       }
