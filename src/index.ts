@@ -12,6 +12,7 @@ import { route as backendCreate } from "./routes/backends/create.js";
 import { route as backendRemove } from "./routes/backends/remove.js";
 import { route as backendLookup } from "./routes/backends/lookup.js";
 
+import { route as forwardConnections } from "./routes/forward/connections.js";
 import { route as forwardCreate } from "./routes/forward/create.js";
 import { route as forwardRemove } from "./routes/forward/remove.js";
 import { route as forwardLookup } from "./routes/forward/lookup.js";
@@ -78,6 +79,7 @@ backendCreate(routeOptions);
 backendRemove(routeOptions);
 backendLookup(routeOptions);
 
+forwardConnections(routeOptions);
 forwardCreate(routeOptions);
 forwardRemove(routeOptions);
 forwardLookup(routeOptions);

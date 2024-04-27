@@ -13,10 +13,7 @@ export function route(routeOptions: RouteOptions) {
     return hasPermissionByToken(permissionList, token, tokens, prisma);
   };
 
-  /**
-   * Creates a new route to use
-   */
-  fastify.post("/api/v1/forward/start", {
+  fastify.post("/api/v1/forward/connections", {
     schema: {
       body: {
         type: "object",
@@ -24,9 +21,9 @@ export function route(routeOptions: RouteOptions) {
 
         properties: {
           token: { type: "string" },
-          id: { type: "number" }
+          id:    { type: "number" }
         }
-      },
+      }
     }
   }, async(req, res) => {
     // @ts-ignore
@@ -36,7 +33,7 @@ export function route(routeOptions: RouteOptions) {
     } = req.body;
 
     if (!await hasPermission(body.token, [
-      "routes.start"
+      "routes.visibleConn"
     ])) {
       return res.status(403).send({
         error: "Unauthorized"
@@ -57,14 +54,9 @@ export function route(routeOptions: RouteOptions) {
       error: "Backend not found"
     });
 
-    // Other restrictions in place make it so that it MUST be either TCP or UDP
-    // @ts-ignore
-    const protocol: "tcp" | "udp" = forward.protocol;
-
-    backends[forward.destProviderID].addConnection(forward.sourceIP, forward.sourcePort, forward.destPort, protocol);
-
     return {
-      success: true
+      success: true,
+      data: backends[forward.destProviderID].getAllConnections()
     }
-  });
+  })
 }

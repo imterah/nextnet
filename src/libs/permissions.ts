@@ -8,6 +8,7 @@ export const permissionListDisabled: Record<string, boolean> = {
   "routes.stop":        false,
   "routes.edit":        false,
   "routes.visible":     false,
+  "routes.visibleConn": false,
 
   "backends.add":       false,
   "backends.remove":    false,
