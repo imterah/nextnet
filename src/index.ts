@@ -4,7 +4,9 @@ import { PrismaClient } from '@prisma/client';
 import Fastify from "fastify";
 
 import type { ServerOptions, SessionToken, RouteOptions } from "./libs/types.js";
-import type { BackendInterface } from "./backendimpl/base.js";
+import type { BackendBaseClass } from "./backendimpl/base.js";
+
+import { backendProviders } from "./backendimpl/index.js";
 
 import { route as getPermissions } from "./routes/getPermissions.js";
 
@@ -20,6 +22,7 @@ import { route as userCreate } from "./routes/user/create.js";
 import { route as userRemove } from "./routes/user/remove.js";
 import { route as userLookup } from "./routes/user/lookup.js";
 import { route as userLogin } from "./routes/user/login.js";
+import { connect } from "node:http2";
 
 const prisma = new PrismaClient();
 
@@ -40,7 +43,7 @@ const serverOptions: ServerOptions = {
 };
 
 const sessionTokens: Record<number, SessionToken[]> = {};
-const backends: Record<number, BackendInterface> = {};
+const backends: Record<number, BackendBaseClass> = {};
 
 const fastify = Fastify({
   logger: true
@@ -54,6 +57,55 @@ const routeOptions: RouteOptions = {
 
   backends: backends
 };
+
+console.log("Initializing forwarding rules...");
+
+const createdBackends = await prisma.desinationProvider.findMany();
+
+for (const backend of createdBackends) {
+  console.log(`Running init steps for ID '${backend.id}' (${backend.name})`);
+
+  const ourProvider = backendProviders[backend.backend];
+  
+  if (!ourProvider) {
+    console.log(" - Error: Invalid backend recieved!");
+    continue;
+  }
+
+  console.log(" - Initializing backend...");
+
+  backends[backend.id] = new ourProvider(backend.connectionDetails);
+  const ourBackend = backends[backend.id];
+
+  if (!await ourBackend.start()) {
+    console.log(" - Error initializing backend!");
+    console.log("   - " + ourBackend.logs.join("\n   - "));
+
+    continue;
+  }
+
+  console.log(" - Initializing clients...");
+
+  const clients = await prisma.forwardRule.findMany({
+    where: {
+      destProviderID: backend.id,
+      enabled: true
+    }
+  });
+
+  for (const client of clients) {
+    if (client.protocol != "tcp" && client.protocol != "udp") {
+      console.error(` - Error: Client with ID of '${client.id}' has an invalid protocol! (must be either TCP or UDP)`);
+      continue;
+    }
+
+    ourBackend.addConnection(client.sourceIP, client.sourcePort, client.destPort, client.protocol);
+  }
+
+  console.log("Init successful.");
+}
+
+console.log("Done.");
 
 getPermissions(routeOptions);
  

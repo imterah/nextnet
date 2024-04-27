@@ -3,35 +3,57 @@ export type ParameterReturnedValue = {
   message?: string
 }
 
-export type ConnectedDevice = {
+export type ForwardRule = {
   sourceIP: string,
   sourcePort: number,
-  destPort: number,
-
-  protocol: "tcp" | "udp"
+  destPort: number
 };
 
-export interface BackendInterface {
-  new(): {
-    addConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void;
-    removeConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void;
- 
-    start(): Promise<boolean>,
-    stop(): Promise<boolean>,
+export type ConnectedClient = {
+  ip: string,
+  port: number,
+  
+  connectionDetails: ForwardRule
+};
 
-    getAllConnections(): {
-      sourceIP: string,
-      sourcePort: number,
-      destPort: number,
-      protocol: "tcp" | "udp"
-    }[];
+export class BackendBaseClass {
+  state: "stopped" | "stopping" | "started" | "starting";
 
-    state: "stopped" | "running" | "starting";
+  clients?: ConnectedClient[]; // Not required to be implemented, but more consistency
+  logs: string[];
 
-    probeConnectedClients: ConnectedDevice[],
-    logs: string[]
-  },
+  constructor(parameters: string) {
+    this.logs = [];
+    this.clients = [];
+    
+    this.state = "stopped";
+  }
 
-  checkParametersConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): ParameterReturnedValue;
-  checkParametersBackendInstance(data: string): ParameterReturnedValue;
+  addConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void {};
+  removeConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): void {};
+
+  async start(): Promise<boolean> {
+    return true;
+  }
+
+  async stop(): Promise<boolean> {
+    return true;
+  };
+
+  getAllConnections(): ConnectedClient[] {
+    if (this.clients == null) return [];
+    return this.clients;
+  };
+
+  static checkParametersConnection(sourceIP: string, sourcePort: number, destPort: number, protocol: "tcp" | "udp"): ParameterReturnedValue {
+    return {
+      success: true
+    }
+  };
+
+  static checkParametersBackendInstance(data: string): ParameterReturnedValue {
+    return {
+      success: true
+    }
+  };
 }
