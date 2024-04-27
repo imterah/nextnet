@@ -15,11 +15,14 @@ import { route as backendLookup } from "./routes/backends/lookup.js";
 import { route as forwardCreate } from "./routes/forward/create.js";
 import { route as forwardRemove } from "./routes/forward/remove.js";
 import { route as forwardLookup } from "./routes/forward/lookup.js";
+import { route as forwardStart } from "./routes/forward/start.js";
+import { route as forwardStop } from "./routes/forward/stop.js";
 
 import { route as userCreate } from "./routes/user/create.js";
 import { route as userRemove } from "./routes/user/remove.js";
 import { route as userLookup } from "./routes/user/lookup.js";
 import { route as userLogin } from "./routes/user/login.js";
+
 import { backendInit } from "./libs/backendInit.js";
 
 const prisma = new PrismaClient();
@@ -78,6 +81,8 @@ backendLookup(routeOptions);
 forwardCreate(routeOptions);
 forwardRemove(routeOptions);
 forwardLookup(routeOptions);
+forwardStart(routeOptions);
+forwardStop(routeOptions);
 
 userCreate(routeOptions);
 userRemove(routeOptions);

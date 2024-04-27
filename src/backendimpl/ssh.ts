@@ -3,6 +3,10 @@ import { Socket } from "node:net";
 
 import type { BackendBaseClass, ForwardRule, ConnectedClient, ParameterReturnedValue } from "./base.js";
 
+type ForwardRuleExt = ForwardRule & {
+  enabled: boolean
+}
+
 // Fight me (for better naming)
 type BackendParsedProviderString = {
   ip:         string,
@@ -40,7 +44,7 @@ export class SSHBackendProvider implements BackendBaseClass {
   state: "stopped" | "stopping" | "started" | "starting";
 
   clients: ConnectedClient[];
-  proxies: ForwardRule[];
+  proxies: ForwardRuleExt[];
   logs: string[];
 
   sshInstance: NodeSSH;
@@ -118,6 +122,7 @@ export class SSHBackendProvider implements BackendBaseClass {
       await this.sshInstance.forwardIn("0.0.0.0", destPort, (info, accept, reject) => {
         const foundProxyEntry = this.proxies.find((i) => i.sourceIP == sourceIP && i.sourcePort == sourcePort && i.destPort == destPort);
         if (!foundProxyEntry) return reject();
+        if (!foundProxyEntry.enabled) return reject();
 
         const client: ConnectedClient = {
           ip: info.srcIP,
@@ -161,7 +166,9 @@ export class SSHBackendProvider implements BackendBaseClass {
     this.proxies.push({
       sourceIP,
       sourcePort,
-      destPort
+      destPort,
+
+      enabled: true
     });
   };
   
@@ -172,8 +179,7 @@ export class SSHBackendProvider implements BackendBaseClass {
     const foundProxyEntry = this.proxies.find((i) => i.sourceIP == sourceIP && i.sourcePort == sourcePort && i.destPort == destPort);
     if (!foundProxyEntry) return;
 
-    const proxyIndex = this.proxies.indexOf(foundProxyEntry);
-    this.proxies.splice(proxyIndex, 1);
+    foundProxyEntry.enabled = false;
   };
 
   getAllConnections(): ConnectedClient[] {
