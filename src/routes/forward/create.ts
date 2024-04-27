@@ -22,20 +22,20 @@ export function route(routeOptions: RouteOptions) {
         required: ["token", "name", "protocol", "sourceIP", "sourcePort", "destinationPort", "providerID"],
 
         properties: {
-          token: { type: "string" },
+          token:           { type: "string" },
 
-          name: { type: "string" },
-          description: { type: "string" },
+          name:            { type: "string" },
+          description:     { type: "string" },
 
-          protocol: { type: "string" },
+          protocol:        { type: "string" },
 
-          sourceIP: { type: "string" },
-          sourcePort: { type: "number" },
+          sourceIP:        { type: "string" },
+          sourcePort:      { type: "number" },
 
           destinationPort: { type: "number" },
 
-          providerID: { type: "number" },
-          autoStart: { type: "boolean" }
+          providerID:      { type: "number" },
+          autoStart:       { type: "boolean" }
         }
       }
     }

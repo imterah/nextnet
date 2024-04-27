@@ -23,7 +23,7 @@ export function route(routeOptions: RouteOptions) {
   
         properties: {
           token: { type: "string" },
-          id: { type: "number" }
+          id:    { type: "number" }
         }
       }
     }
