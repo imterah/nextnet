@@ -114,13 +114,11 @@ export class SSHBackendProvider implements BackendBaseClass {
     const foundProxyEntry = this.proxies.find((i) => i.sourceIP == sourceIP && i.sourcePort == sourcePort && i.destPort == destPort);
     if (foundProxyEntry) return;
 
-    console.log("connection added");
-
     (async() => {
       await this.sshInstance.forwardIn("0.0.0.0", destPort, (info, accept, reject) => {
         const foundProxyEntry = this.proxies.find((i) => i.sourceIP == sourceIP && i.sourcePort == sourcePort && i.destPort == destPort);
         if (!foundProxyEntry) return reject();
-        
+
         const client: ConnectedClient = {
           ip: info.srcIP,
           port: info.srcPort,
