@@ -5,7 +5,8 @@ export function route(routeOptions: RouteOptions) {
   const {
     fastify,
     prisma,
-    tokens
+    tokens,
+    backends
   } = routeOptions;
 
   function hasPermission(token: string, permissionList: string[]): Promise<boolean> {
@@ -52,7 +53,7 @@ export function route(routeOptions: RouteOptions) {
       "backends.secretVis"
     ]);
     
-    const backends = await prisma.desinationProvider.findMany({
+    const prismaBackends = await prisma.desinationProvider.findMany({
       where: {
         id: body.id,
         name: body.name,
@@ -63,12 +64,14 @@ export function route(routeOptions: RouteOptions) {
 
     return {
       success: true,
-      data: backends.map((i) => ({
+      data: prismaBackends.map((i) => ({
         name: i.name,
         description: i.description,
 
         backend: i.backend,
-        connectionDetails: canSeeSecrets ? i.connectionDetails : ""
+        connectionDetails: canSeeSecrets ? i.connectionDetails : "",
+
+        logs: backends[i.id].logs
       }))
     }
   });
