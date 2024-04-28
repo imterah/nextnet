@@ -42,7 +42,7 @@ export function route(routeOptions: RouteOptions) {
       error: "Email or password is incorrect"
     });
 
-    const passwordIsValid = compare(userSearch.password, body.password);
+    const passwordIsValid = await compare(body.password, userSearch.password);
     
     if (!passwordIsValid) return res.status(403).send({
       error: "Email or password is incorrect"
