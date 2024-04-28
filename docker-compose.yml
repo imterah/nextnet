@@ -1,9 +1,9 @@
 services:
-  nextnet:
+  nextnet-api:
     build:
-      context: "."
+      context: "./api"
       dockerfile: Dockerfile
-    image: nextnet/latest
+    image: nextnet-api/latest
     container_name: nextnet-api
     restart: always
     ports:

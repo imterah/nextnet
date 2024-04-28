@@ -18,9 +18,11 @@
 
 2. Run `nix-shell`, or alternatively `source init.sh` if you're not using Nix.
 
-3. After that, run the project in development mode: `npm run dev`.
+<h3 align="center">API Development</h3>
 
-4. If you want to explore your database, run `npx prisma studio` to open the database editor.
+1. After that, run the project in development mode: `npm run dev`.
+
+2. If you want to explore your database, run `npx prisma studio` to open the database editor.
 
 <h2 align="center">Production Deployment</h2>
 
@@ -36,7 +38,7 @@
   
 3. Build the docker stack: `docker compose --env-file .env up -d`
 
-<h3 align="center">Troubleshooting</h3>
+<h2 align="center">Troubleshooting</h2>
 
 * I'm using the SSH tunneling, and I can't reach any of the tunnels publicly.
   - Be sure to enable GatewayPorts in your sshd config (in `/etc/ssh/sshd_config` on most systems). Also, be sure to check your firewall rules on your system and your network.
