@@ -1,5 +1,5 @@
 [package]
-name = "gui"
+name = "nextnet-gui"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 eframe = "0.27.2"
 egui = "0.27.2"
+ehttp = { version = "0.5.0", features = ["json"] }
+serde = "1.0.199"
+serde_json = "1.0.116"

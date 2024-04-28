@@ -94,7 +94,6 @@ export function route(routeOptions: RouteOptions) {
         sourcePort: body.sourcePort,
 
         destPort: body.destinationPort,
-
         destProviderID: body.providerID,
 
         enabled: Boolean(body.autoStart)
