@@ -34,4 +34,9 @@
 
 2. Build the dockerfile: `docker compose --env-file .env build`
   
-3. Build the docker stack: `docker compose --env-file .env up`
+3. Build the docker stack: `docker compose --env-file .env up -d`
+
+<h3 align="center">Troubleshooting</h3>
+
+* I'm using the SSH tunneling, and I can't reach any of the tunnels publicly.
+  - Be sure to enable GatewayPorts in your sshd config (in `/etc/ssh/sshd_config` on most systems). Also, be sure to check your firewall rules on your system and your network.
