@@ -6,7 +6,8 @@ use crate::ApplicationState;
 
 pub fn main(state: &mut ApplicationState, api: &api::NextAPIClient, ctx: &eframe::egui::Context) {
     egui::Window::new("Log In").show(ctx, move |ui| {
-        ui.heading("Login");
+        ui.set_max_width(275.0);
+
         ui.horizontal(|ui| {
             ui.label("Email: ");
             ui.text_edit_singleline(&mut state.username);
@@ -24,7 +25,7 @@ pub fn main(state: &mut ApplicationState, api: &api::NextAPIClient, ctx: &eframe
                 match res.token {
                     Some(x) => {
                         let mut token = token_clone.lock().unwrap();
-                    *token = x;
+                        *token = x;
                     },
                     None => {
                         let mut token = token_clone.lock().unwrap();
@@ -32,15 +33,6 @@ pub fn main(state: &mut ApplicationState, api: &api::NextAPIClient, ctx: &eframe
                     }
                 }
             }));
-        }
-
-        match state.token.lock() {
-            Ok(x) => {
-                ui.label(format!("Token: {:?}", *x));
-            },
-            Err(_) => {
-                ui.label(format!("No token."));
-            }
         }
     });
 }

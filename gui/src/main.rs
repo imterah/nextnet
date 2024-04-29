@@ -32,7 +32,14 @@ fn main() -> Result<(), eframe::Error> {
 
     eframe::run_simple_native("NextNet GUI", options, move |ctx, _frame| {
         egui::CentralPanel::default().show(ctx, |_ui| {
-            components::log_in::main(&mut app_state, &api, ctx);
+            let token_clone = Arc::clone(&app_state.token);
+            let token = token_clone.lock().unwrap();
+            
+            if *token == "".to_string() {
+                components::log_in::main(&mut app_state, &api, ctx);
+            } else {
+                // ...
+            }
         });
     })
 }
