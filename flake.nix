@@ -28,21 +28,9 @@
           ];
           commands = [
             {
-              help = "start the api in dev mode.";
-              name = "api.dev";
-              command = ''cd "$(git rev-parse --show-toplevel)/api" && npm run dev &>api.log'';
-              category = "api";
-            }
-            {
               help = "kill the api.";
               name = "api.kill";
               command = "kill -9 $(lsof -i :3000 | awk '{l=$2} END {print l}')";
-              category = "api";
-            }
-            {
-              help = "view the api log.";
-              name = "api.log";
-              command = ''tail -f "$(git rev-parse --show-toplevel)/api/api.log"'';
               category = "api";
             }
             {
@@ -69,8 +57,6 @@
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.xorg.libXrandr}/lib
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.xorg.libXi}/lib
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.libGL}/lib
-
-            alias api.dev='$(cd "$(git rev-parse --show-toplevel)/api" && npm run dev &>api.log) & disown; echo "API started in the background."';
 
             source init.sh
           '';
