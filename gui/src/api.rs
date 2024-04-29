@@ -12,17 +12,6 @@ pub struct LoginResponse {
     pub token: Option<String>
 }
 
-#[allow(non_snake_case)]
-pub struct Backend {
-    pub id:                Option<u32>,
-    pub backend:           Option<String>,
-    pub name:              Option<String>,
-    pub description:       Option<String>,
-    pub connectionDetails: Option<String>,
-
-    pub logs:              Option<Vec<String>>
-}
-
 impl NextAPIClient {
     pub fn login(&self, email: &str, password: &str, mut callback: impl 'static + Send + FnMut(LoginResponse)) {
         let json_data = json!({
