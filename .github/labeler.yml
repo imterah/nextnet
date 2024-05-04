@@ -1,0 +1,14 @@
+modifies labeler:
+  - .github/labeler.yml
+modifies ci:
+  - .github/workflows/*.yml
+modifies docker:
+  - '**/Dockerfile'
+  - '**/docker-compose.yml'
+  - '**/*.env'
+modifies api:
+  - api/**/*
+modifies gui:
+  - gui/**/*
+modifies nix:
+  - '**/*.nix'
