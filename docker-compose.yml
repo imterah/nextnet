@@ -1,9 +1,6 @@
 services:
   nextnet-api:
-    build:
-      context: "./api"
-      dockerfile: Dockerfile
-    image: nextnet-api/latest
+    image: ghcr.io/greysoh/api:latest
     container_name: nextnet-api
     restart: always
     ports:
@@ -13,7 +10,7 @@ services:
       DATABASE_URL: "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@nextnet-postgres:5432/${POSTGRES_DB}?schema=nextnet"
 
   postgres:
-    image: "postgres:15.4"
+    image: postgres:15.4
     container_name: nextnet-postgres
     restart: unless-stopped
     environment:

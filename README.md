@@ -33,10 +33,8 @@
    ```bash
    sed "s/POSTGRES_PASSWORD=nextnet/POSTGRES_PASSWORD=$(head -c 500 /dev/random | sha512sum | cut -d " " -f 1)/g" prod-docker.env > .env
    ```
-
-2. Build the dockerfile: `docker compose build`
   
-3. Build the docker stack: `docker compose --env-file .env up -d`
+2. Build the docker stack: `docker compose --env-file .env up -d`
 
 <h2 align="center">Troubleshooting</h2>
 
