@@ -35,7 +35,7 @@ jobs:
             do
               file_text=$line
             done < "$input_file"
-            echo ::set-output name=version::$file_text
+            echo "version=$file_text" >> $GITHUB_OUTPUT
          - name: build images
            run: |
             docker build ./api --tag ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
