@@ -30,5 +30,6 @@ jobs:
          - name: build images
            run: |
             docker build ./api --tag ghcr.io/greysoh/api:$(cat VERSION)
-            docker push ghcr.io/greysoh/api:latest
+            docker tag ghcr.io/greysoh/api:$(cat VERSION) ghcr.io/greysoh/api:latest
             docker push ghcr.io/greysoh/api:$(cat VERSION)
+            docker push ghcr.io/greysoh/api:latest
