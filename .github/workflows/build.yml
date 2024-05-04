@@ -27,12 +27,8 @@ jobs:
              registry: ghcr.io
              username: ${{github.actor}}
              password: ${{secrets.GITHUB_TOKEN}}
-         - name: get version
-           id: get_version
-           run: |
-            echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
          - name: build images
            run: |
-            docker build ./api --tag ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
+            docker build ./api --tag ghcr.io/greysoh/api:$(cat VERSION)
             docker push ghcr.io/greysoh/api:latest
-            docker push ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
+            docker push ghcr.io/greysoh/api:$(cat VERSION)
