@@ -1,0 +1,42 @@
+name: builder
+on:
+   pull_request:
+      types:
+         - closed
+      paths:
+         - 'VERSION'
+   workflow_dispatch:
+   push:
+      branches: dev
+      paths:
+         - VERSION
+      tags-ignore:
+         - '*'
+jobs:
+   build:
+      if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+      runs-on: ubuntu-latest
+      permissions:
+         packages: write
+      steps:
+         - name: checkout
+           uses: actions/checkout@main
+         - name: login to ghcr
+           uses: docker/login-action@v1
+           with:
+             registry: ghcr.io
+             username: ${{github.actor}}
+             password: ${{secrets.GITHUB_TOKEN}}
+         - name: get version
+           id: get_version
+           run: |
+            input_file="VERSION"
+            while read line
+            do
+              file_text=$line
+            done < "$input_file"
+            echo ::set-output name=version::$file_text
+         - name: build images
+           run: |
+            docker build ./api --tag ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
+            docker push ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}

@@ -1,4 +1,5 @@
 FROM node:20.11.1-bookworm
+LABEL org.opencontainers.image.source="https://github.com/greysoh/nextnet"
 WORKDIR /app/
 COPY src /app/src
 COPY prisma /app/prisma
