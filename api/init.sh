@@ -1,5 +1,5 @@
 if [ ! -d ".tmp" ]; then
-  echo "Hello and welcome to the NextNet (backend) project! Please wait while I initialize things for you..."
+  echo "Please wait while I initialize the backend source for you..."
   cp dev.env .env
   mkdir .tmp
 fi

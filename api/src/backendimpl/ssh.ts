@@ -121,8 +121,7 @@ export class SSHBackendProvider implements BackendBaseClass {
     (async() => {
       await this.sshInstance.forwardIn("0.0.0.0", destPort, (info, accept, reject) => {
         const foundProxyEntry = this.proxies.find((i) => i.sourceIP == sourceIP && i.sourcePort == sourcePort && i.destPort == destPort);
-        if (!foundProxyEntry) return reject();
-        if (!foundProxyEntry.enabled) return reject();
+        if (!foundProxyEntry || !foundProxyEntry.enabled) return reject();
 
         const client: ConnectedClient = {
           ip: info.srcIP,
@@ -143,11 +142,11 @@ export class SSHBackendProvider implements BackendBaseClass {
         // Why is this so confusing
         const destConn = accept();
 
-        destConn.on("data", (chunk: Uint8Array) => {
+        destConn.addListener("data", (chunk: Uint8Array) => {
           srcConn.write(chunk);
         });
 
-        destConn.on("exit", () => {
+        destConn.addListener("close", () => {
           this.clients.splice(this.clients.indexOf(client), 1);
           srcConn.end();
         });

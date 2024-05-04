@@ -27,6 +27,11 @@
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.xorg.libXi}/lib
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.libGL}/lib
 
+    if [ ! -d ".tmp" ]; then
+      echo "Hello and welcome to the NextNet project!"
+      mkdir .tmp
+    fi
+    
     source init.sh
   '';
 }
