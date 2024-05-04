@@ -4,7 +4,7 @@ function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); // The maximum is exclusive and the minimum is inclusive
 }
 
-export function generateRandomData(length: number): string {
+export function generateRandomData(length: number = 128): string {
   let newString = "";
 
   for (let i = 0; i < length; i += 2) {
@@ -19,8 +19,4 @@ export function generateRandomData(length: number): string {
   }
 
   return newString;
-}
-
-export function generateToken() {
-  return generateRandomData(128);
 }

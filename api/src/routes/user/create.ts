@@ -1,7 +1,7 @@
 import { hash } from "bcrypt";
 
 import { permissionListEnabled } from "../../libs/permissions.js";
-import { generateToken } from "../../libs/generateToken.js";
+import { generateRandomData } from "../../libs/generateRandom.js";
 
 import type { RouteOptions } from "../../libs/types.js";
 
@@ -82,7 +82,7 @@ export function route(routeOptions: RouteOptions) {
 
     if (options.allowUnsafeGlobalTokens) {
       // @ts-ignore
-      userData.rootToken = generateToken();
+      userData.rootToken = generateRandomData();
       // @ts-ignore
       userData.isRootServiceAccount = true;
     }
@@ -98,7 +98,7 @@ export function route(routeOptions: RouteOptions) {
         token: userCreateResults.rootToken
       };
     } else {
-      const generatedToken = generateToken();
+      const generatedToken = generateRandomData();
 
       tokens[userCreateResults.id] = [];
 

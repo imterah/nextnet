@@ -1,6 +1,6 @@
 import { compare } from "bcrypt";
 
-import { generateToken } from "../../libs/generateToken.js";
+import { generateRandomData } from "../../libs/generateRandom.js";
 import type { RouteOptions } from "../../libs/types.js";
 
 export function route(routeOptions: RouteOptions) {
@@ -48,7 +48,7 @@ export function route(routeOptions: RouteOptions) {
       error: "Email or password is incorrect"
     });
 
-    const token = generateToken();
+    const token = generateRandomData();
     if (!tokens[userSearch.id]) tokens[userSearch.id] = [];
     
     tokens[userSearch.id].push({
