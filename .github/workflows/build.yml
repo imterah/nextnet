@@ -34,4 +34,5 @@ jobs:
          - name: build images
            run: |
             docker build ./api --tag ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
+            docker push ghcr.io/greysoh/api:latest
             docker push ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
