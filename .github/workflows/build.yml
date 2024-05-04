@@ -30,12 +30,7 @@ jobs:
          - name: get version
            id: get_version
            run: |
-            input_file="VERSION"
-            while read line
-            do
-              file_text=$line
-            done < "$input_file"
-            echo "version=$file_text" >> $GITHUB_OUTPUT
+            echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
          - name: build images
            run: |
             docker build ./api --tag ghcr.io/greysoh/api:${{ steps.get_version.outputs.version }}
