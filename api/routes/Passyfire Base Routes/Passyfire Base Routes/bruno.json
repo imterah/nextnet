@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Passyfire Base Routes",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
