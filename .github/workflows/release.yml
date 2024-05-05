@@ -29,7 +29,7 @@ jobs:
 
       - name: Get version information
         id: get_version
-        run: echo "version=v$(cat version)" >> $GITHUB_OUTPUT
+        run: echo "version=v$(cat VERSION)" >> $GITHUB_OUTPUT
 
       - name: Make tag on Git
         uses: laputansoft/github-tag-action@v4.6
@@ -46,14 +46,12 @@ jobs:
           pullRequests: true
           prWoLabels: true
           addSections: >-
-            {"documentation":{"prefix":"
-            **Documentation:**","labels":["documentation"]}}
+            {"documentation":{"prefix":"**Documentation:**","labels":["documentation"]}}
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: >-
-            chore: Update changelog for tag
-            ${{steps.get_version.outputs.version}}
+            chore: Update changelog for tag ${{steps.get_version.outputs.version}}
           file_pattern: CHANGELOG.md
 
       - name: Release on GitHub
