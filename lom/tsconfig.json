@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "es2022",
+    "moduleResolution": "node",
+    
+    "outDir": "./out",
+    "rootDir": "./src",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+
+    "declaration": true,
+    "declarationMap": true,
+
+    "strictPropertyInitialization": false,
+  },
+
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
