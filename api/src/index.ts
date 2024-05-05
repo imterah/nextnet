@@ -55,7 +55,7 @@ const backends: Record<number, BackendBaseClass> = {};
 
 const fastify = Fastify({
   logger: true,
-  trustProxy: Boolean(process.env.IS_BEHIND_PROXY)
+  trustProxy: Boolean(process.env.IS_BEHIND_PROXY),
 });
 
 const routeOptions: RouteOptions = {
