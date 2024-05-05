@@ -5,90 +5,95 @@ import { backendProviders } from "../../backendimpl/index.js";
 import { backendInit } from "../../libs/backendInit.js";
 
 export function route(routeOptions: RouteOptions) {
-  const {
-    fastify,
-    prisma,
-    tokens,
-    backends
-  } = routeOptions;
+  const { fastify, prisma, tokens, backends } = routeOptions;
 
-  function hasPermission(token: string, permissionList: string[]): Promise<boolean> {
+  function hasPermission(
+    token: string,
+    permissionList: string[],
+  ): Promise<boolean> {
     return hasPermissionByToken(permissionList, token, tokens, prisma);
-  };
-  
+  }
+
   /**
    * Creates a new backend to use
    */
-  fastify.post("/api/v1/backends/create", {
-    schema: {
-      body: {
-        type: "object",
-        required: ["token", "name", "backend", "connectionDetails"],
+  fastify.post(
+    "/api/v1/backends/create",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["token", "name", "backend", "connectionDetails"],
 
-        properties: {
-          token:             { type: "string" },
-          name:              { type: "string" },
-          description:       { type: "string" },
-          backend:           { type: "string" }
-        }
+          properties: {
+            token: { type: "string" },
+            name: { type: "string" },
+            description: { type: "string" },
+            backend: { type: "string" },
+          },
+        },
+      },
+    },
+    async (req, res) => {
+      // @ts-ignore
+      const body: {
+        token: string;
+        name: string;
+        description?: string;
+        connectionDetails: any;
+        backend: string;
+      } = req.body;
+
+      if (!(await hasPermission(body.token, ["backends.add"]))) {
+        return res.status(403).send({
+          error: "Unauthorized",
+        });
       }
-    }
-  }, async(req, res) => {
-    // @ts-ignore
-    const body: {
-      token: string,
-      name: string,
-      description?: string,
-      connectionDetails: any,
-      backend: string
-    } = req.body;
 
-    if (!await hasPermission(body.token, [
-      "backends.add"
-    ])) {
-      return res.status(403).send({
-        error: "Unauthorized"
-      });
-    };
-
-    if (!backendProviders[body.backend]) {
-      return res.status(400).send({
-        error: "Unknown/unsupported/deprecated backend!"
-      });
-    };
-
-    const connectionDetails = JSON.stringify(body.connectionDetails);
-    const connectionDetailsValidityCheck = backendProviders[body.backend].checkParametersBackendInstance(connectionDetails);
-
-    if (!connectionDetailsValidityCheck.success) {
-      return res.status(400).send({
-        error: connectionDetailsValidityCheck.message ?? "Unknown error while attempting to parse connectionDetails (it's on your side)"
-      });
-    };
-
-    const backend = await prisma.desinationProvider.create({
-      data: {
-        name: body.name,
-        description: body.description,
-
-        backend: body.backend,
-        connectionDetails: JSON.stringify(body.connectionDetails)
+      if (!backendProviders[body.backend]) {
+        return res.status(400).send({
+          error: "Unknown/unsupported/deprecated backend!",
+        });
       }
-    });
 
-    const init = await backendInit(backend, backends, prisma);
-    
-    if (!init) {
-      // TODO: better error code
-      return res.status(504).send({
-        error: "Backend is created, but failed to initalize correctly",
-        id: backend.id
+      const connectionDetails = JSON.stringify(body.connectionDetails);
+      const connectionDetailsValidityCheck =
+        backendProviders[body.backend].checkParametersBackendInstance(
+          connectionDetails,
+        );
+
+      if (!connectionDetailsValidityCheck.success) {
+        return res.status(400).send({
+          error:
+            connectionDetailsValidityCheck.message ??
+            "Unknown error while attempting to parse connectionDetails (it's on your side)",
+        });
+      }
+
+      const backend = await prisma.desinationProvider.create({
+        data: {
+          name: body.name,
+          description: body.description,
+
+          backend: body.backend,
+          connectionDetails: JSON.stringify(body.connectionDetails),
+        },
       });
-    }
 
-    return {
-      success: true,
-      id: backend.id
-    };
-  });
+      const init = await backendInit(backend, backends, prisma);
+
+      if (!init) {
+        // TODO: better error code
+        return res.status(504).send({
+          error: "Backend is created, but failed to initalize correctly",
+          id: backend.id,
+        });
+      }
+
+      return {
+        success: true,
+        id: backend.id,
+      };
+    },
+  );
 }

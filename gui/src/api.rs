@@ -3,17 +3,22 @@ use serde::Deserialize;
 use serde_json::json;
 
 pub struct NextAPIClient {
-    pub url: String
+    pub url: String,
 }
 
 #[derive(Deserialize, Debug, Default)]
 pub struct LoginResponse {
     pub error: Option<String>,
-    pub token: Option<String>
+    pub token: Option<String>,
 }
 
 impl NextAPIClient {
-    pub fn login(&self, email: &str, password: &str, mut callback: impl 'static + Send + FnMut(LoginResponse)) {
+    pub fn login(
+        &self,
+        email: &str,
+        password: &str,
+        mut callback: impl 'static + Send + FnMut(LoginResponse),
+    ) {
         let json_data = json!({
             "email": email,
             "password": password
@@ -24,7 +29,10 @@ impl NextAPIClient {
 
         println!("{}", json_str);
 
-        let mut request = Request::post(self.url.clone() + "/api/v1/users/login", json_str.as_bytes().to_vec());
+        let mut request = Request::post(
+            self.url.clone() + "/api/v1/users/login",
+            json_str.as_bytes().to_vec(),
+        );
         request.headers.insert("Content-Type", "application/json");
 
         fetch(request, move |result: ehttp::Result<ehttp::Response>| {
@@ -36,9 +44,7 @@ impl NextAPIClient {
 }
 
 pub fn new(url: String) -> NextAPIClient {
-    let api_client: NextAPIClient = NextAPIClient {
-        url
-    };
+    let api_client: NextAPIClient = NextAPIClient { url };
 
     return api_client;
 }
