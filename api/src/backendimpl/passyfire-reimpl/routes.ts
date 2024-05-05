@@ -121,8 +121,6 @@ export function route(instance: PassyFireBackendProvider) {
       },
     },
   }, async (req, res) => {
-    console.log(req.hostname);
-
     // @ts-ignore
     const body: {
       token: string
@@ -134,28 +132,31 @@ export function route(instance: PassyFireBackendProvider) {
       error: "Invalid token"
     });
 
-    const host = req.hostname.substring(0, req.hostname.indexOf(":"));
+    // const host = req.hostname.substring(0, req.hostname.indexOf(":"));
     const unparsedPort = req.hostname.substring(req.hostname.indexOf(":") + 1);
     
     // @ts-ignore
     // parseInt(...) can take a number just fine, at least in Node.JS
     const port = parseInt(unparsedPort == "" ? proxiedPort : unparsedPort);
 
+    // This protocol is so confusing. I'm sorry.
     res.send({
       success: true,
       data: instance.proxies.map((proxy) => ({
         proxyUrlSettings: {
-          host,
+          host: "sameAs", // Makes pfC work (this is by design apparently)
           port,
           protocol: proxy.protocol.toUpperCase()
         },
   
-        dest: `${proxy.sourceIP}:${proxy.sourcePort}`,
-        name: `${proxy.protocol.toUpperCase()} on ::${proxy.sourcePort}`,
+        dest: `${proxy.sourceIP}:${proxy.destPort}`,
+        name: `${proxy.protocol.toUpperCase()} on ::${proxy.sourcePort} -> ::${proxy.destPort}`,
   
         passwords: [
           proxy.userConfig[userData.username]
         ],
+
+        running: true
       }))
     });
   });
