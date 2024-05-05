@@ -1,0 +1,69 @@
+name: release
+on:
+   pull_request:
+      types:
+         - closed
+      paths:
+         - 'VERSION'
+   workflow_dispatch:
+   push:
+      branches: dev
+      paths:
+         - VERSION
+      tags-ignore:
+         - '*'
+
+jobs:
+   build:
+      if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+      runs-on: ubuntu-latest
+      permissions:
+         packages: write
+      steps:
+         - name: Checkout code using Git
+           uses: actions/checkout@main
+         - name: Get version information
+           id: get_version
+           run: echo "version=v$(cat version)" >> $GITHUB_OUTPUT
+         - name: Make tag on Git
+           uses: laputansoft/github-tag-action@v4.6
+           with:
+            github_token: ${{secrets.GITHUB_TOKEN}}
+            tag: ${{ steps.get_version.outputs.version }}
+         - name: Make changelog
+           uses: heinrichreimer/github-changelog-generator-action@v2.1.1
+           with:
+            token: ${{secrets.GITHUB_TOKEN}}
+            issues: true
+            issuesWoLabels: true
+            pullRequests: true
+            prWoLabels: true
+            addSections: '{"documentation":{"prefix":" **Documentation:**","labels":["documentation"]}}'
+         - uses: stefanzweifel/git-auto-commit-action@v4
+           with:
+             commit_message: 'chore: Update changelog for tag ${{steps.get_version.outputs.version}}'
+             file_pattern: CHANGELOG.md
+         - name: Release on GitHub
+           uses: softprops/action-gh-release@v2
+           with:
+            body_path: CHANGELOG.md
+            files: |
+               LICENSE
+               docker-compose.yml
+            repository: greysoh/nextnet
+            token: ${{ secrets.GITHUB_TOKEN }}
+         - name: Log in to GitHub container registry
+           uses: docker/login-action@v3
+           with:
+             registry: ghcr.io
+             username: ${{github.actor}}
+             password: ${{secrets.GITHUB_TOKEN}}
+         - name: Build all docker images
+           run: |
+            docker build ./api --tag ghcr.io/greysoh/api:$(cat VERSION)
+         - name: Publish all docker images
+           run: |
+            docker tag ghcr.io/greysoh/api:$(cat VERSION) ghcr.io/greysoh/api:latest
+            docker push ghcr.io/greysoh/api:$(cat VERSION)
+            docker push ghcr.io/greysoh/api:latest
+        
