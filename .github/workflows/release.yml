@@ -79,7 +79,7 @@ jobs:
           docker build ./api --tag ghcr.io/greysoh/api:$(cat VERSION)
 
       - name: Publish all docker images
-        run: >
+        run: |
           docker tag ghcr.io/greysoh/api:$(cat VERSION) ghcr.io/greysoh/api:latest
           docker push ghcr.io/greysoh/api:$(cat VERSION)
           docker push ghcr.io/greysoh/api:latest
