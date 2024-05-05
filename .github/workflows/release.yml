@@ -32,10 +32,10 @@ jobs:
         run: echo "version=v$(cat VERSION)" >> $GITHUB_OUTPUT
 
       - name: Make tag on Git
-        uses: laputansoft/github-tag-action@v4.6
+        uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: '${{secrets.GITHUB_TOKEN}}'
-          tag: '${{ steps.get_version.outputs.version }}'
+          custom_tag: '${{ steps.get_version.outputs.version }}'
 
       - name: Make changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.1.1
@@ -48,10 +48,11 @@ jobs:
           addSections: >-
             {"documentation":{"prefix":"**Documentation:**","labels":["documentation"]}}
 
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Update changelog
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: >-
-            chore: Update changelog for tag ${{steps.get_version.outputs.version}}
+            chore: Update changelog for tag ${{steps.get_version.outputs.version}}.
           file_pattern: CHANGELOG.md
 
       - name: Release on GitHub
