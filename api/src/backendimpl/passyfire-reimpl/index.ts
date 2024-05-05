@@ -1,17 +1,26 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import fastifyWebsocket from "@fastify/websocket";
+
+import type { FastifyInstance } from "fastify";
+import Fastify from "fastify";
 
 import type { ForwardRule, ConnectedClient, ParameterReturnedValue, BackendBaseClass } from "../base.js";
-import { route } from "./routes.js";
 import { generateRandomData } from "../../libs/generateRandom.js";
+import { requestHandler } from "./socket.js";
+import { route } from "./routes.js";
 
 type BackendProviderUser = {
   username: string,
   password: string
 }
 
-type ForwardRuleExt = ForwardRule & {
+export type ForwardRuleExt = ForwardRule & {
   protocol:   "tcp" | "udp",
   userConfig: Record<string, string>
+};
+
+export type ConnectedClientExt = ConnectedClient & {
+  connectionDetails: ForwardRuleExt;
+  username:          string;
 };
 
 // Fight me (for better naming)
@@ -67,7 +76,7 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
 export class PassyFireBackendProvider implements BackendBaseClass {
   state: "stopped" | "stopping" | "started" | "starting";
 
-  clients: ConnectedClient[];
+  clients: ConnectedClientExt[];
   proxies: ForwardRuleExt[];
   users: LoggedInUser[];
   logs: string[];
@@ -94,7 +103,10 @@ export class PassyFireBackendProvider implements BackendBaseClass {
       trustProxy: this.options.isProxied
     });
 
+    await this.fastify.register(fastifyWebsocket);
     route(this);
+
+    this.fastify.get("/", { websocket: true }, (ws, req) => requestHandler(this, ws, req));
 
     await this.fastify.listen({
       port: this.options.port,

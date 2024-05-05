@@ -3,7 +3,7 @@ import type { PassyFireBackendProvider } from "./index.js";
 
 export function route(instance: PassyFireBackendProvider) {
   const { fastify } = instance;
-
+  
   const proxiedPort: number = instance.options.publicPort ?? 443;
 
   const unsupportedSpoofedRoutes: string[] = [
