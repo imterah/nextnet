@@ -5,6 +5,7 @@
     # gui/
     cargo
     rustc
+    rustfmt
     
     # api/
     nodejs

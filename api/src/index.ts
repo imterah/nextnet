@@ -1,10 +1,14 @@
 import process from "node:process";
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 import Fastify from "fastify";
 
-import type { ServerOptions, SessionToken, RouteOptions } from "./libs/types.js";
-import type { BackendBaseClass } from "./backendimpl/base.js";``
+import type {
+  ServerOptions,
+  SessionToken,
+  RouteOptions,
+} from "./libs/types.js";
+import type { BackendBaseClass } from "./backendimpl/base.js";
 
 import { route as getPermissions } from "./routes/getPermissions.js";
 
@@ -28,27 +32,29 @@ import { backendInit } from "./libs/backendInit.js";
 
 const prisma = new PrismaClient();
 
-const isSignupEnabled: boolean   = Boolean(process.env.IS_SIGNUP_ENABLED);
+const isSignupEnabled: boolean = Boolean(process.env.IS_SIGNUP_ENABLED);
 const unsafeAdminSignup: boolean = Boolean(process.env.UNSAFE_ADMIN_SIGNUP);
 
-const noUsersCheck: boolean = await prisma.user.count() == 0;
+const noUsersCheck: boolean = (await prisma.user.count()) == 0;
 
 if (unsafeAdminSignup) {
-  console.error("WARNING: You have admin sign up on! This means that anyone that signs up will have admin rights!");
+  console.error(
+    "WARNING: You have admin sign up on! This means that anyone that signs up will have admin rights!",
+  );
 }
 
 const serverOptions: ServerOptions = {
   isSignupEnabled: isSignupEnabled ? true : noUsersCheck,
   isSignupAsAdminEnabled: unsafeAdminSignup ? true : noUsersCheck,
 
-  allowUnsafeGlobalTokens: process.env.NODE_ENV != "production"
+  allowUnsafeGlobalTokens: process.env.NODE_ENV != "production",
 };
 
 const sessionTokens: Record<number, SessionToken[]> = {};
 const backends: Record<number, BackendBaseClass> = {};
 
 const fastify = Fastify({
-  logger: true
+  logger: true,
 });
 
 const routeOptions: RouteOptions = {
@@ -57,7 +63,7 @@ const routeOptions: RouteOptions = {
   tokens: sessionTokens,
   options: serverOptions,
 
-  backends: backends
+  backends: backends,
 };
 
 console.log("Initializing forwarding rules...");
@@ -66,7 +72,7 @@ const createdBackends = await prisma.desinationProvider.findMany();
 
 for (const backend of createdBackends) {
   console.log(`Running init steps for ID '${backend.id}' (${backend.name})`);
-  const init = await backendInit(backend, backends, prisma);  
+  const init = await backendInit(backend, backends, prisma);
 
   if (init) console.log("Init successful.");
 }
@@ -74,7 +80,7 @@ for (const backend of createdBackends) {
 console.log("Done.");
 
 getPermissions(routeOptions);
- 
+
 backendCreate(routeOptions);
 backendRemove(routeOptions);
 backendLookup(routeOptions);
@@ -95,7 +101,7 @@ userLogin(routeOptions);
 try {
   await fastify.listen({
     port: 3000,
-    host: process.env.NODE_ENV == "production" ? "0.0.0.0" : "127.0.0.1"
+    host: process.env.NODE_ENV == "production" ? "0.0.0.0" : "127.0.0.1",
   });
 } catch (err) {
   fastify.log.error(err);
