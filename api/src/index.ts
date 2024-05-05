@@ -48,7 +48,8 @@ const sessionTokens: Record<number, SessionToken[]> = {};
 const backends: Record<number, BackendBaseClass> = {};
 
 const fastify = Fastify({
-  logger: true
+  logger: true,
+  trustProxy: Boolean(process.env.IS_BEHIND_PROXY)
 });
 
 const routeOptions: RouteOptions = {
