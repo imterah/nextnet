@@ -34,8 +34,9 @@ jobs:
       - name: Make tag on Git
         uses: mathieudutour/github-tag-action@v6.2
         with:
-          github_token: '${{secrets.GITHUB_TOKEN}}'
-          custom_tag: '${{ steps.get_version.outputs.version }}'
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          custom_tag: ${{ steps.get_version.outputs.version }}
+          tag_prefix: ''
 
       - name: Make changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.1.1
@@ -63,14 +64,15 @@ jobs:
             LICENSE
             docker-compose.yml
           repository: greysoh/nextnet
-          token: '${{ secrets.GITHUB_TOKEN }}'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.get_version.outputs.version }}
 
       - name: Log in to GitHub container registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: '${{github.actor}}'
-          password: '${{secrets.GITHUB_TOKEN}}'
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
 
       - name: Build all docker images
         run: |
