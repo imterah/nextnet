@@ -1,6 +1,8 @@
 import type { Axios } from "axios";
 
-type PrintLine = (...str: string[]) => void;
+import { run as connection } from "./commands/connections.js";
+
+export type PrintLine = (...str: string[]) => void;
 
 type Command = (
   args: string[],
@@ -34,4 +36,9 @@ export const commands: Commands = [
       printf("\x1B[2J\x1B[3J\x1B[H");
     },
   },
+  {
+    name: "connection",
+    description: "Various connection related utilities",
+    run: connection
+  }
 ];
