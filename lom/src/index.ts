@@ -19,6 +19,10 @@ const axios = baseAxios.create({
 async function readFromKeyboard(stream: ssh2.ServerChannel, disableEcho: boolean = false): Promise<string> {
   const leftEscape = "\x1B[D";
   const rightEscape = "\x1B[C";
+
+  const ourBackspace = "\u0008";
+
+  // \x7F = Ascii escape code for backspace   (client side)
   
   let line = "";
   let lineIndex = 0;
@@ -34,10 +38,28 @@ async function readFromKeyboard(stream: ssh2.ServerChannel, disableEcho: boolean
 
       return;
     } else if (readStreamData.includes("\x7F")) {
-      // \x7F = Ascii escape code for backspace   (client side)
-      // \u0008 = Ascii escape code for backspace (server side)
-      line = line.substring(0, line.length - 1);
-      if (!disableEcho) stream.write("\u0008 \u0008");
+      // TODO (greysoh): investigate maybe potential deltaCursor overflow (haven't tested)
+      // TODO (greysoh): investigate deltaCursor underflow
+      // TODO (greysoh): make it not run like shit (I don't know how to describe it)
+      
+      if (line.length == 0) return setTimeout(eventLoop, 5); // Here because if we do it in the parent if statement, shit breaks
+      line = line.substring(0, lineIndex - 1) + line.substring(lineIndex);
+
+      if (!disableEcho) {
+        let deltaCursor = line.length - lineIndex;
+
+        // wtf?
+        if (deltaCursor < 0) {
+          console.log("FIXME: somehow, our deltaCursor value is negative! please investigate me");
+          return setTimeout(eventLoop, 5);
+        }
+
+        // Jump forward to the front, and remove the last character
+        stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
+
+        // Go backwards & rerender text & go backwards again (wtf?)
+        stream.write(leftEscape.repeat(deltaCursor + 1) + line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor + 1));
+      }
     } else if (readStreamData.includes("\x1B")) {    
       if (readStreamData.includes(rightEscape)) {
         if (lineIndex + 1 > line.length) return setTimeout(eventLoop, 5);
@@ -151,7 +173,11 @@ server.on("connection", client => {
           const line = await readFromKeyboard(stream);
           stream.write("\r\n");
           
-          if (line == "") continue;
+          if (line == "") {
+            stream.write(`~$ `);
+            continue;
+          }
+
           const argv = parseArgsStringToArgv(line);
     
           if (argv[0] == "exit") {
