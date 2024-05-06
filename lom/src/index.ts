@@ -13,12 +13,13 @@ const serverBaseURL: string =
 
 const axios = baseAxios.create({
   baseURL: serverBaseURL,
-  validateStatus(status) {
-    return true;
-  },
+  validateStatus: () => true
 });
 
-async function readFromKeyboard(stream: ssh2.ServerChannel): Promise<any> {
+async function readFromKeyboard(stream: ssh2.ServerChannel, disableEcho: boolean = false): Promise<string> {
+  const leftEscape = "\x1B[D";
+  const rightEscape = "\x1B[C";
+  
   let line = "";
   let lineIndex = 0;
   let isReady = false;
@@ -33,17 +34,11 @@ async function readFromKeyboard(stream: ssh2.ServerChannel): Promise<any> {
 
       return;
     } else if (readStreamData.includes("\x7F")) {
-      // \x7F = Ascii escape code for backspace (client side)
-      if (line == "" || line == "\r") return setTimeout(eventLoop, 5);
-
+      // \x7F = Ascii escape code for backspace   (client side)
+      // \u0008 = Ascii escape code for backspace (server side)
       line = line.substring(0, line.length - 1);
-
-      // Ascii escape code for backspace (server side)
-      stream.write("\u0008 \u0008");
-    } else if (readStreamData.includes("\x1B")) {
-      const leftEscape = "\x1B[D";
-      const rightEscape = "\x1B[C";
-    
+      if (!disableEcho) stream.write("\u0008 \u0008");
+    } else if (readStreamData.includes("\x1B")) {    
       if (readStreamData.includes(rightEscape)) {
         if (lineIndex + 1 > line.length) return setTimeout(eventLoop, 5);
         lineIndex += 1;
@@ -54,13 +49,24 @@ async function readFromKeyboard(stream: ssh2.ServerChannel): Promise<any> {
         return setTimeout(eventLoop, 5);
       }
 
-      stream.write(readStreamData);
+      if (!disableEcho) stream.write(readStreamData);
     } else {
       lineIndex += readStreamData.length;
 
       // There isn't a splice method for String prototypes. So, ugh:
-      line = line.substring(0, lineIndex - 1) + readStreamData + line.substring(lineIndex + readStreamData.length, line.length);
-      stream.write(readStreamData);
+      line = line.substring(0, lineIndex - 1) + readStreamData + line.substring(lineIndex - 1);
+      
+      if (!disableEcho) {
+        let deltaCursor = line.length - lineIndex;
+      
+        // wtf?
+        if (deltaCursor < 0) {
+          console.log("FIXME: somehow, our deltaCursor value is negative! please investigate me");
+          deltaCursor = 0;
+        }
+      
+        stream.write(line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor));
+      }
     }
 
     setTimeout(eventLoop, 5);
