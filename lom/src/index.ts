@@ -78,6 +78,7 @@ server.on("connection", client => {
         );
 
         let line = "";
+        let lineIndex = 0;
 
         function println(...str: string[]) {
           stream.write(str.join(" ").replace("\n", "\r\n"));
@@ -97,6 +98,7 @@ server.on("connection", client => {
 
             const argv = parseArgsStringToArgv(line);
             line = "";
+            lineIndex = 0;
 
             if (argv[0] == "exit") {
               stream.close();
@@ -120,12 +122,31 @@ server.on("connection", client => {
 
             line = line.substring(0, line.length - 1);
 
-            // Ascii excape code for backspace (server side)
+            // Ascii escape code for backspace (server side)
             stream.write("\u0008 \u0008");
-          } else if (!readStreamData.includes("\x1B")) {
-            // (hacky) include all input but client sided ascii movement
-            // TODO: implement
-            line += readStreamData;
+          } else if (readStreamData.includes("\x1B")) {
+            const leftEscape = "\x1B[D";
+            const rightEscape = "\x1B[C";
+            
+            if (readStreamData.includes(rightEscape)) {
+              if (lineIndex + 1 > line.length) return setTimeout(eventLoop, 5);
+              lineIndex += 1;
+            } else if (readStreamData.includes(leftEscape)) {
+              if (lineIndex - 1 < 0) return setTimeout(eventLoop, 5);
+              lineIndex -= 1;
+            } else {
+              return setTimeout(eventLoop, 5);
+            }
+
+            stream.write(readStreamData);
+          } else {
+            lineIndex += readStreamData.length;
+
+            // There isn't a splice method for String prototypes. So, ugh:
+            line = line.substring(0, lineIndex - 1) + readStreamData + line.substring(lineIndex + readStreamData.length, line.length);
+
+            console.log(line);
+
             stream.write(readStreamData);
           }
 
