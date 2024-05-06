@@ -3,11 +3,21 @@ services:
     image: ghcr.io/greysoh/api:latest
     container_name: nextnet-api
     restart: always
+    env_file:
+      - .env
     ports:
       - 3000:3000
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@nextnet-postgres:5432/${POSTGRES_DB}?schema=nextnet"
+
+  # NOTE: For this to work correctly, the nextnet-api must be version > 0.1.1
+  # or have a version with backported username support, incl. logins
+  nextnet-lom:
+    image: ghcr.io/greysoh/nextnet-ssh:latest
+    container_name: nextnet_api
+    restart: always
+    ports:
+      - 2222:2222
+    volumes:
+      - ssh_key_data:/app/keys
 
   postgres:
     image: postgres:15.4
@@ -22,3 +32,4 @@ services:
 
 volumes:
   postgres_data:
+  ssh_key_data:

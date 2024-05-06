@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Lights Out Management, NextNet style",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
@@ -13,7 +14,14 @@
   "author": "greysoh",
   "license": "BSD-3-Clause",
   "devDependencies": {
+    "@types/node": "^20.12.8",
+    "@types/ssh2": "^1.15.0",
     "nodemon": "^3.0.3",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "ssh2": "^1.15.0",
+    "string-argv": "^0.3.2"
   }
 }
