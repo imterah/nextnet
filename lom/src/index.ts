@@ -1,4 +1,5 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { format } from "node:util";
 
 import parseArgsStringToArgv from "string-argv";
 import baseAxios from "axios";
@@ -77,7 +78,7 @@ server.on("connection", client => {
         );
 
         function println(...str: string[]) {
-          stream.write(str.join(" ").replace("\n", "\r\n"));
+          stream.write(format(...str).replace("\n", "\r\n"));
         };
 
         while (true) {
