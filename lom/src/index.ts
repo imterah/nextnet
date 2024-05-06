@@ -18,6 +18,66 @@ const axios = baseAxios.create({
   },
 });
 
+async function readFromKeyboard(stream: ssh2.ServerChannel): Promise<any> {
+  let line = "";
+  let lineIndex = 0;
+  let isReady = false;
+
+  async function eventLoop(): Promise<any> {
+    const readStreamData = stream.read();
+    if (readStreamData == null) return setTimeout(eventLoop, 5);
+
+    if (readStreamData.includes("\r") || readStreamData.includes("\n")) {
+      line = line.replace("\r", "");
+      isReady = true;
+
+      return;
+    } else if (readStreamData.includes("\x7F")) {
+      // \x7F = Ascii escape code for backspace (client side)
+      if (line == "" || line == "\r") return setTimeout(eventLoop, 5);
+
+      line = line.substring(0, line.length - 1);
+
+      // Ascii escape code for backspace (server side)
+      stream.write("\u0008 \u0008");
+    } else if (readStreamData.includes("\x1B")) {
+      const leftEscape = "\x1B[D";
+      const rightEscape = "\x1B[C";
+    
+      if (readStreamData.includes(rightEscape)) {
+        if (lineIndex + 1 > line.length) return setTimeout(eventLoop, 5);
+        lineIndex += 1;
+      } else if (readStreamData.includes(leftEscape)) {
+        if (lineIndex - 1 < 0) return setTimeout(eventLoop, 5);
+        lineIndex -= 1;
+      } else {
+        return setTimeout(eventLoop, 5);
+      }
+
+      stream.write(readStreamData);
+    } else {
+      lineIndex += readStreamData.length;
+
+      // There isn't a splice method for String prototypes. So, ugh:
+      line = line.substring(0, lineIndex - 1) + readStreamData + line.substring(lineIndex + readStreamData.length, line.length);
+      stream.write(readStreamData);
+    }
+
+    setTimeout(eventLoop, 5);
+  }
+  
+  // Yes, this is bad practice. Currently, I don't care.
+  return new Promise(async(resolve) => {
+    eventLoop();
+
+    while (!isReady) {
+      await new Promise((i) => setTimeout(i, 5));
+    }
+
+    resolve(line);
+  });
+};
+
 try {
   keyFile = await readFile("../keys/host.key");
 } catch (e) {
@@ -77,83 +137,34 @@ server.on("connection", client => {
           "Welcome to NextNet LOM. Run 'help' to see commands.\r\n\r\n~$ ",
         );
 
-        let line = "";
-        let lineIndex = 0;
-
         function println(...str: string[]) {
           stream.write(str.join(" ").replace("\n", "\r\n"));
-        }
+        };
 
-        async function eventLoop(): Promise<any> {
-          const readStreamData = stream.read();
-          if (readStreamData == null) return setTimeout(eventLoop, 5);
-
-          if (readStreamData.includes("\r") || readStreamData.includes("\n")) {
-            line = line.replace("\r", "");
-
-            if (line == "") {
-              stream.write(`\r\n~$ `);
-              return setTimeout(eventLoop, 5);
-            }
-
-            const argv = parseArgsStringToArgv(line);
-            line = "";
-            lineIndex = 0;
-
-            if (argv[0] == "exit") {
-              stream.close();
-            } else {
-              stream.write("\r\n");
-              const command = commands.find(i => i.name == argv[0]);
-
-              if (!command) {
-                stream.write(
-                  `Unknown command ${argv[0]}. Run 'help' to see commands.\r\n~$ `,
-                );
-                return setTimeout(eventLoop, 5);
-              }
-
-              await command.run(argv, println, axios, token);
-              stream.write(`~$ `);
-            }
-          } else if (readStreamData.includes("\x7F")) {
-            // \x7F = Ascii escape code for backspace (client side)
-            if (line == "" || line == "\r") return setTimeout(eventLoop, 5);
-
-            line = line.substring(0, line.length - 1);
-
-            // Ascii escape code for backspace (server side)
-            stream.write("\u0008 \u0008");
-          } else if (readStreamData.includes("\x1B")) {
-            const leftEscape = "\x1B[D";
-            const rightEscape = "\x1B[C";
-            
-            if (readStreamData.includes(rightEscape)) {
-              if (lineIndex + 1 > line.length) return setTimeout(eventLoop, 5);
-              lineIndex += 1;
-            } else if (readStreamData.includes(leftEscape)) {
-              if (lineIndex - 1 < 0) return setTimeout(eventLoop, 5);
-              lineIndex -= 1;
-            } else {
-              return setTimeout(eventLoop, 5);
-            }
-
-            stream.write(readStreamData);
+        while (true) {
+          const line = await readFromKeyboard(stream);
+          stream.write("\r\n");
+          
+          if (line == "") continue;
+          const argv = parseArgsStringToArgv(line);
+    
+          if (argv[0] == "exit") {
+            stream.close();
           } else {
-            lineIndex += readStreamData.length;
+            const command = commands.find(i => i.name == argv[0]);
+    
+            if (!command) {
+              stream.write(
+                `Unknown command ${argv[0]}. Run 'help' to see commands.\r\n~$ `,
+              );
 
-            // There isn't a splice method for String prototypes. So, ugh:
-            line = line.substring(0, lineIndex - 1) + readStreamData + line.substring(lineIndex + readStreamData.length, line.length);
-
-            console.log(line);
-
-            stream.write(readStreamData);
+              continue;
+            }
+    
+            await command.run(argv, println, axios, token);
+            stream.write(`~$ `);
           }
-
-          setTimeout(eventLoop, 5);
         }
-
-        eventLoop();
       });
     });
   });
