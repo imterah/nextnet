@@ -24,6 +24,7 @@ export function route(routeOptions: RouteOptions) {
             id: { type: "number" },
             name: { type: "string" },
             email: { type: "string" },
+            username: { type: "string" },
             isServiceAccount: { type: "boolean" },
           },
         },
@@ -36,6 +37,7 @@ export function route(routeOptions: RouteOptions) {
         id?: number;
         name?: string;
         email?: string;
+        username?: string;
         isServiceAccount?: boolean;
       } = req.body;
 
@@ -50,6 +52,7 @@ export function route(routeOptions: RouteOptions) {
           id: body.id,
           name: body.name,
           email: body.email,
+          username: body.username,
           isRootServiceAccount: body.isServiceAccount,
         },
       });
@@ -60,6 +63,7 @@ export function route(routeOptions: RouteOptions) {
           name: i.name,
           email: i.email,
           isServiceAccount: i.isRootServiceAccount,
+          username: i.username
         })),
       };
     },

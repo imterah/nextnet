@@ -17,10 +17,11 @@ export function route(routeOptions: RouteOptions) {
       schema: {
         body: {
           type: "object",
-          required: ["name", "email", "password"],
+          required: ["name", "email", "username", "password"],
 
           properties: {
             name: { type: "string" },
+            username: { type: "string" },
             email: { type: "string" },
             password: { type: "string" },
           },
@@ -33,6 +34,7 @@ export function route(routeOptions: RouteOptions) {
         name: string;
         email: string;
         password: string;
+        username: string;
       } = req.body;
 
       if (!options.isSignupEnabled) {
@@ -59,6 +61,8 @@ export function route(routeOptions: RouteOptions) {
         name: body.name,
         email: body.email,
         password: saltedPassword,
+
+        username: body.username,
 
         permissions: {
           create: [] as {

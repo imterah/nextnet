@@ -45,6 +45,7 @@ model User {
   id Int @id @default(autoincrement())
 
   email                String  @unique
+  username             String? // NOT optional in the API, but just for backwards compat
   name                 String
   password             String // Will be hashed using bcrypt
   rootToken            String?

@@ -15,11 +15,12 @@ export function route(routeOptions: RouteOptions) {
       schema: {
         body: {
           type: "object",
-          required: ["email", "password"],
+          required: ["password"],
 
           properties: {
             email: { type: "string" },
-            password: { type: "string" },
+            username: { type: "string" },
+            password: { type: "string" }
           },
         },
       },
@@ -27,13 +28,19 @@ export function route(routeOptions: RouteOptions) {
     async (req, res) => {
       // @ts-ignore
       const body: {
-        email: string;
+        email?: string;
+        username?: string;
         password: string;
       } = req.body;
+
+      if (!body.email && !body.username) return res.status(400).send({
+        error: "missing both email and username. please supply at least one."
+      });
 
       const userSearch = await prisma.user.findFirst({
         where: {
           email: body.email,
+          username: body.username
         },
       });
 
