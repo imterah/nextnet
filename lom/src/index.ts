@@ -78,7 +78,7 @@ server.on("connection", client => {
         );
 
         function println(...str: string[]) {
-          stream.write(format(...str).replace("\n", "\r\n"));
+          stream.write(format(...str).replaceAll("\n", "\r\n"));
         };
 
         while (true) {

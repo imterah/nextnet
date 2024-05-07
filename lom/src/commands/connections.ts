@@ -1,32 +1,28 @@
-import { parseArgs } from "node:util";
-
+import { Command } from "commander";
 import type { Axios } from "axios";
+
+import { type AppState, patchCommander } from "../libs/patchCommander.js";
 import type { PrintLine } from "../commands.js";
 
 export async function run(
-  args: string[],
+  argv: string[],
   println: PrintLine,
   axios: Axios,
   apiKey: string,
 ) {
-  const options = parseArgs({
-    args,
+  const program = new Command();
+  const appState: AppState = {
+    hasRecievedExitSignal: false
+  };
 
-    strict: false,
-    allowPositionals: true,
+  patchCommander(program, appState, println);
 
-    options: {
-      tail: {
-        type: "boolean",
-        short: "t",
-        default: false,
-      },
-    },
-  });
+  program
+    .option('-d, --debug', 'output extra debugging')
+    .option('-s, --small', 'small pizza size')
+    .option('-p, --pizza-type <type>', 'flavour of pizza');
 
-  // Special filtering
-  const values = options.values;
-  const positionals = options.positionals
-    .map(i => (!i.startsWith("-") ? i : ""))
-    .filter(Boolean);
+  program.parse(["node", ...argv]);
+
+  if (appState.hasRecievedExitSignal) return;
 }
