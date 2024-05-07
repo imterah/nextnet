@@ -1,37 +1,36 @@
 import type { ServerChannel } from "ssh2";
 
+const pullRate = process.env.KEYBOARD_PULLING_RATE ? parseInt(process.env.KEYBOARD_PULLING_RATE) : 5;
+
+const leftEscape = "\x1B[D";
+const rightEscape = "\x1B[C";
+
+const ourBackspace = "\u0008";
+const clientBackspace = "\x7F";
+
 export async function readFromKeyboard(
   stream: ServerChannel,
   disableEcho: boolean = false,
 ): Promise<string> {
-  const leftEscape = "\x1B[D";
-  const rightEscape = "\x1B[C";
-
-  const ourBackspace = "\u0008";
-
-  // \x7F = Ascii escape code for backspace   (client side)
+  let promise: (value: string | PromiseLike<string>) => void;
 
   let line = "";
   let lineIndex = 0;
-  let isReady = false;
 
   async function eventLoop(): Promise<any> {
     const readStreamData = stream.read();
-    if (readStreamData == null) return setTimeout(eventLoop, 5);
+    if (readStreamData == null) return setTimeout(eventLoop, pullRate);
 
     if (readStreamData.includes("\r") || readStreamData.includes("\n")) {
-      line = line.replace("\r", "");
-      isReady = true;
-
-      return;
-    } else if (readStreamData.includes("\x7F")) {
-      if (line.length == 0) return setTimeout(eventLoop, 5); // Here because if we do it in the parent if statement, shit breaks
+      return promise(line.replace("\r", ""));
+    } else if (readStreamData.includes(clientBackspace)) {
+      if (line.length == 0) return setTimeout(eventLoop, pullRate); // Here because if we do it in the parent if statement, shit breaks
       line = line.substring(0, lineIndex - 1) + line.substring(lineIndex);
 
       if (!disableEcho) {
         const deltaCursor = line.length - lineIndex;
 
-        if (deltaCursor == line.length) return setTimeout(eventLoop, 5);
+        if (deltaCursor == line.length) return setTimeout(eventLoop, pullRate);
 
         if (deltaCursor < 0) {
           // Use old technique if the delta is < 0, as the new one is tailored to the start + 1 to end - 1
@@ -52,13 +51,13 @@ export async function readFromKeyboard(
       }
     } else if (readStreamData.includes("\x1B")) {
       if (readStreamData.includes(rightEscape)) {
-        if (lineIndex + 1 > line.length) return setTimeout(eventLoop, 5);
+        if (lineIndex + 1 > line.length) return setTimeout(eventLoop, pullRate);
         lineIndex += 1;
       } else if (readStreamData.includes(leftEscape)) {
-        if (lineIndex - 1 < 0) return setTimeout(eventLoop, 5);
+        if (lineIndex - 1 < 0) return setTimeout(eventLoop, pullRate);
         lineIndex -= 1;
       } else {
-        return setTimeout(eventLoop, 5);
+        return setTimeout(eventLoop, pullRate);
       }
 
       if (!disableEcho) stream.write(readStreamData);
@@ -88,17 +87,12 @@ export async function readFromKeyboard(
       }
     }
 
-    setTimeout(eventLoop, 5);
-  }
+    setTimeout(eventLoop, pullRate);
+  };
 
   // Yes, this is bad practice. Currently, I don't care.
   return new Promise(async resolve => {
-    eventLoop();
-
-    while (!isReady) {
-      await new Promise(i => setTimeout(i, 5));
-    }
-
-    resolve(line);
+    setTimeout(eventLoop, pullRate);
+    promise = resolve;
   });
 }
