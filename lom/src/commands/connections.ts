@@ -88,9 +88,11 @@ export async function run(
   getInbound.description("Shows all current connections");
   getInbound.argument("<id>", "Tunnel ID to view inbound connections of");
   getInbound.option("-t, --tail", "Live-view of connection list");
+  getInbound.option("-s, --tail-pull-rate <ms>", "Controls the speed to pull at (in ms)");
 
   getInbound.action(async(idStr: string, options: {
-    tail?: boolean
+    tail?: boolean,
+    tailPullRate?: string
   }): Promise<void> => {
     type InboundConnectionSuccess = {
       success: true,
@@ -107,11 +109,17 @@ export async function run(
       }[]
     };
   
+    const pullRate: number = options.tailPullRate ? parseInt(options.tailPullRate) : 2000;
     const id = parseInt(idStr);
 
     if (Number.isNaN(id)) {
       println("ID (%s) is not a number\n", idStr);
-      return;
+      return resolve(null);
+    }
+
+    if (Number.isNaN(pullRate)) {
+      println("Pull rate is not a number\n");
+      return resolve(null);
     }
 
     if (options.tail) {
@@ -146,7 +154,7 @@ export async function run(
 
         previousEntries = simplifiedArray;
 
-        await new Promise((i) => setTimeout(i, 2000));
+        await new Promise((i) => setTimeout(i, pullRate));
       }
     } else {
       const response = await axios.post("/api/v1/forward/connections", {
