@@ -69,7 +69,10 @@ server.on("connection", client => {
 
       // We're dumb. We don't really care.
       conn.on("pty", accept => accept());
-      conn.on("window-change", accept => accept());
+      conn.on("window-change", accept => {
+        if (typeof accept != "function") return;
+        accept();
+      });
 
       conn.on("shell", async accept => {
         const stream = accept();
