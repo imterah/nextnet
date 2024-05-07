@@ -32,10 +32,12 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
 
   if (typeof jsonData.ip != "string")
     throw new Error("IP field is not a string");
+
   if (typeof jsonData.port != "number") throw new Error("Port is not a number");
 
   if (typeof jsonData.username != "string")
     throw new Error("Username is not a string");
+
   if (typeof jsonData.privateKey != "string")
     throw new Error("Private key is not a string");
 

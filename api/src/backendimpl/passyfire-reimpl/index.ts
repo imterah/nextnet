@@ -54,6 +54,7 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
 
   if (typeof jsonData.ip != "string")
     throw new Error("IP field is not a string");
+  
   if (typeof jsonData.port != "number") throw new Error("Port is not a number");
 
   if (
@@ -61,6 +62,7 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
     typeof jsonData.publicPort != "number"
   )
     throw new Error("(optional field) Proxied port is not a number");
+  
   if (
     typeof jsonData.isProxied != "undefined" &&
     typeof jsonData.isProxied != "boolean"

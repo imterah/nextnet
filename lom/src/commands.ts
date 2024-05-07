@@ -1,6 +1,8 @@
 import type { Axios } from "axios";
 
 import { run as connection } from "./commands/connections.js";
+import { run as backends } from "./commands/backends.js";
+import { run as users } from "./commands/users.js";
 
 export type PrintLine = (...str: string[]) => void;
 
@@ -17,8 +19,6 @@ type Commands = {
   run: Command;
 }[];
 
-// TODO: add commands!
-
 export const commands: Commands = [
   {
     name: "help",
@@ -27,6 +27,8 @@ export const commands: Commands = [
       commands.forEach(command => {
         printf(`${command.name}: ${command.description}\n`);
       });
+
+      printf("\nRun a command of your choosing with --help to see more options.\n");
     },
   },
   {
@@ -37,8 +39,23 @@ export const commands: Commands = [
     },
   },
   {
-    name: "connection",
-    description: "Various connection related utilities",
+    name: "conn",
+    description: "Manages connections for NextNet",
     run: connection
+  },
+  {
+    name: "user",
+    description: "Manages users for NextNet",
+    run: users
+  },
+  {
+    name: "backend",
+    description: "Manages backends for NextNet",
+    run: backends
+  },
+  {
+    name: "back",
+    description: "(alias) Manages backends for NextNet",
+    run: backends
   }
 ];
