@@ -4,7 +4,7 @@ import { run as connection } from "./commands/connections.js";
 import { run as backends } from "./commands/backends.js";
 import { run as users } from "./commands/users.js";
 
-export type PrintLine = (...str: string[]) => void;
+export type PrintLine = (...str: any[]) => void;
 
 type Command = (
   args: string[],

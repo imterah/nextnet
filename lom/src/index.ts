@@ -80,8 +80,8 @@ server.on("connection", client => {
           "Welcome to NextNet LOM. Run 'help' to see commands.\r\n\r\n~$ ",
         );
 
-        function println(...str: string[]) {
-          stream.write(format(...str).replaceAll("\n", "\r\n"));
+        function println(...data: any[]) {
+          stream.write(format(...data).replaceAll("\n", "\r\n"));
         };
 
         while (true) {

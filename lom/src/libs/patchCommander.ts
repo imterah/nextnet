@@ -35,7 +35,7 @@ export class SSHCommand extends Command {
 
         if (process.env.NODE_ENV != "production") {
           println(
-            "Caught irrecoverable action (command help call) in patchCommander\n",
+            "Caught irrecoverable crash (command help call) in patchCommander\n",
           );
         } else {
           println("Aborted\n");
@@ -46,12 +46,22 @@ export class SSHCommand extends Command {
     }
   }
 
-  _exit() {
+  recvExitDispatch() {
     this.hasRecievedExitSignal = true;
+    let parentElement = this.parent;
+
+    while (parentElement instanceof SSHCommand) {
+      parentElement.hasRecievedExitSignal = true;
+      parentElement = parentElement.parent;
+    };
+  }
+
+  _exit() {
+    this.recvExitDispatch();
   }
 
   _exitCallback() {
-    this.hasRecievedExitSignal = true;
+    this.recvExitDispatch();
   }
 
   action(fn: (...args: any[]) => void | Promise<void>): this {
@@ -63,7 +73,7 @@ export class SSHCommand extends Command {
 
     // @ts-ignore
     this._actionHandler = async (...args: any[]): Promise<void> => {
-      if (args[0][0] == "--help" || args[0][0] == "-h") return;
+      if (this.hasRecievedExitSignal) return;
       await oldActionHandler(...args);
     };
 

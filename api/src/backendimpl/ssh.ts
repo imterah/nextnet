@@ -179,7 +179,7 @@ export class SSHBackendProvider implements BackendBaseClass {
             srcConn.write(chunk);
           });
 
-          destConn.addListener("close", () => {
+          destConn.addListener("end", () => {
             this.clients.splice(this.clients.indexOf(client), 1);
             srcConn.end();
           });
@@ -190,7 +190,7 @@ export class SSHBackendProvider implements BackendBaseClass {
 
           srcConn.on("end", () => {
             this.clients.splice(this.clients.indexOf(client), 1);
-            destConn.close();
+            destConn.end();
           });
         },
       );

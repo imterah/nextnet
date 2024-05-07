@@ -45,19 +45,23 @@ export function route(routeOptions: RouteOptions) {
         },
       });
 
-      if (!forward)
+      if (!forward) {
         return res.status(400).send({
           error: "Could not find forward entry",
         });
+      }
 
-      if (!backends[forward.destProviderID])
+      if (!backends[forward.destProviderID]) {
         return res.status(400).send({
           error: "Backend not found",
         });
+      }
 
       return {
         success: true,
-        data: backends[forward.destProviderID].getAllConnections(),
+        data: backends[forward.destProviderID].getAllConnections().filter((i) => {
+          return i.connectionDetails.sourceIP == forward.sourceIP && i.connectionDetails.sourcePort == forward.sourcePort && i.connectionDetails.destPort == forward.destPort;
+        }),
       };
     },
   );
