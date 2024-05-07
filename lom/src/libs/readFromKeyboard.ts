@@ -32,7 +32,7 @@ export async function readFromKeyboard(stream: ServerChannel, disableEcho: boole
 
         if (deltaCursor < 0) {
           // Use old technique if the delta is < 0, as the new one is tailored to the start + 1 to end - 1
-          stream.write("\u0008 \u0008");
+          stream.write(ourBackspace + " " + ourBackspace);
         } else {
           // Jump forward to the front, and remove the last character
           stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
