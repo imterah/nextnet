@@ -22,27 +22,26 @@ export async function readFromKeyboard(stream: ServerChannel, disableEcho: boole
 
       return;
     } else if (readStreamData.includes("\x7F")) {
-      // TODO (greysoh): investigate maybe potential deltaCursor overflow (haven't tested)
-      // TODO (greysoh): investigate deltaCursor underflow
-      // TODO (greysoh): make it not run like shit (I don't know how to describe it)
-      
       if (line.length == 0) return setTimeout(eventLoop, 5); // Here because if we do it in the parent if statement, shit breaks
       line = line.substring(0, lineIndex - 1) + line.substring(lineIndex);
 
       if (!disableEcho) {
-        let deltaCursor = line.length - lineIndex;
+        const deltaCursor = line.length - lineIndex;
+        
+        if (deltaCursor == line.length) return setTimeout(eventLoop, 5);
 
-        // wtf?
         if (deltaCursor < 0) {
-          console.log("FIXME: somehow, our deltaCursor value is negative! please investigate me");
-          return setTimeout(eventLoop, 5);
+          // Use old technique if the delta is < 0, as the new one is tailored to the start + 1 to end - 1
+          stream.write("\u0008 \u0008");
+        } else {
+          // Jump forward to the front, and remove the last character
+          stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
+
+          // Go backwards & rerender text & go backwards again (wtf?)
+          stream.write(leftEscape.repeat(deltaCursor + 1) + line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor + 1));
         }
 
-        // Jump forward to the front, and remove the last character
-        stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
-
-        // Go backwards & rerender text & go backwards again (wtf?)
-        stream.write(leftEscape.repeat(deltaCursor + 1) + line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor + 1));
+        lineIndex -= 1;
       }
     } else if (readStreamData.includes("\x1B")) {    
       if (readStreamData.includes(rightEscape)) {
