@@ -93,8 +93,7 @@ export async function readFromKeyboard(
     setTimeout(eventLoop, pullRate);
   };
 
-  // Yes, this is bad practice. Currently, I don't care.
-  return new Promise(async resolve => {
+  return new Promise(resolve => {
     setTimeout(eventLoop, pullRate);
     promise = resolve;
   });
