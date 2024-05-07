@@ -21,7 +21,10 @@ export async function readFromKeyboard(
     const readStreamData = stream.read();
     if (readStreamData == null) return setTimeout(eventLoop, pullRate);
 
-    if (readStreamData.includes("\r") || readStreamData.includes("\n")) {
+    if (readStreamData.includes("\x03")) {
+      stream.write("^C");
+      return promise("");
+    } else if (readStreamData.includes("\r") || readStreamData.includes("\n")) {
       return promise(line.replace("\r", ""));
     } else if (readStreamData.includes(clientBackspace)) {
       if (line.length == 0) return setTimeout(eventLoop, pullRate); // Here because if we do it in the parent if statement, shit breaks
