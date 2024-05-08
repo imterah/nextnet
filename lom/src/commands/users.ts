@@ -22,7 +22,7 @@ export async function run(
   readKeyboard: KeyboardRead
 ) {
   if (argv.length == 1) return println("error: no arguments specified! run %s --help to see commands.\n", argv[0]);
-  
+
   const program = new SSHCommand(println);
   program.description("Manages users for NextNet");
   program.version("v1.0.0-testing");
@@ -172,16 +172,16 @@ export async function run(
 
     const { data }: UserLookupSuccess = response.data;
 
-    data.forEach((user) => {
+    for (const user of data) {
       println("UID: %s%s:\n", user.id, (user.isServiceAccount ? " (service)" : ""));
       println("- Username: %s\n", user.username);
       println("- Name: %s\n", user.name);
       println("- Email: %s\n", user.email);
 
       println("\n");
-    });
+    }
 
-    println("%s users found.\n", response.data.data.length);
+    println("%s users found.\n", data.length);
   })
 
   program.addCommand(addCommand);
