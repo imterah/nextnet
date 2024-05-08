@@ -8,6 +8,35 @@ function difference(a: any[], b: any[]) {
 	return a.filter(x => b.indexOf(x) < 0);
 };
 
+type InboundConnectionSuccess = {
+  success: true,
+  data: {
+    ip: string,
+    port: number,
+
+    connectionDetails: {
+      sourceIP: string,
+      sourcePort: number,
+      destPort: number,
+      enabled: boolean
+    }
+  }[]
+};
+
+type LookupCommandSuccess = {
+  success: true,
+  data: {
+    id: number,
+    name: string,
+    description: string,
+    sourceIP: string,
+    sourcePort: number,
+    destPort: number,
+    providerID: number,
+    autoStart: boolean
+  }[]
+};
+
 export async function run(
   argv: string[],
   println: PrintLine,
@@ -18,7 +47,7 @@ export async function run(
 
   const program = new SSHCommand(println);
   program.description("Manages connections for NextNet");
-  program.version("v0.1.0-preprod");
+  program.version("v1.0.0-testing");
 
   const addCommand = new SSHCommand(println, "add");
   addCommand.description("Creates a new connection");
@@ -37,7 +66,7 @@ export async function run(
   );
 
   addCommand.argument("<dest_port>", "Destination port to use");
-  addCommand.option("--description, -d", "Description for the tunnel");
+  addCommand.option("-d, --description", "Description for the tunnel");
 
   addCommand.action(async(providerIDStr: string, name: string, protocolRaw: string, source: string, destPortRaw: string, options: {
     description?: string
@@ -112,28 +141,118 @@ export async function run(
   );
 
   lookupCommand.option(
-    "--backend_id, -b <id>",
+    "-b, --backend-id <id>",
     "The backend ID to use. Can be fetched by 'back find'",
   );
 
-  lookupCommand.option("--name, -n <name>", "The name for the tunnel");
+  lookupCommand.option("-n, --name <name>", "The name for the tunnel");
 
   lookupCommand.option(
-    "--protocol, -p <protocol>",
+    "-p, --protocol <protocol>",
     "The protocol to use. Either TCP or UDP",
   );
 
   lookupCommand.option(
-    "--source, -s <source>",
+    "-s <source>, --source",
     "Source IP and port combo (ex. '192.168.0.63:25565'",
   );
 
-  lookupCommand.option("--dest_port, -d <port>", "Destination port to use");
+  lookupCommand.option("-d, --dest-port <port>", "Destination port to use");
 
   lookupCommand.option(
-    "--description, -o <description>",
+    "-o, --description <description>",
     "Description for the tunnel",
   );
+
+  lookupCommand.action(async(options: {
+    backendId?: string,
+    destPort?: string,
+    name?: string,
+    protocol?: string,
+    source?: string,
+    description?: string
+  }) => {
+    let numberBackendID: number | undefined;
+
+    let sourceIP:   string | undefined;
+    let sourcePort: number | undefined;
+
+    let destPort:   number | undefined;
+
+    if (options.backendId) {
+      numberBackendID = parseInt(options.backendId);
+
+      if (Number.isNaN(numberBackendID)) {
+        println("ID (%s) is not a number\n", options.backendId);
+        return;
+      }
+    }
+
+    if (options.source) {
+      const sourceSplit: string[] = options.source.split(":");
+
+      if (sourceSplit.length != 2) {
+        return println("Source could not be splitted down (are you missing the ':' in the source to specify port?)\n");
+      }
+  
+      sourceIP = sourceSplit[0];
+      sourcePort = parseInt(sourceSplit[1]);
+  
+      if (Number.isNaN(sourcePort)) {
+        return println("Port splitted is not a number\n");
+      }
+    }
+
+    if (options.destPort) {
+      destPort = parseInt(options.destPort);
+
+      if (Number.isNaN(destPort)) {
+        println("ID (%s) is not a number\n", options.destPort);
+        return;
+      }
+    }
+
+    const response = await axios.post("/api/v1/forward/lookup", {
+      token,
+
+      name: options.name,
+      description: options.description,
+
+      protocol: options.protocol,
+
+      sourceIP,
+      sourcePort,
+
+      destinationPort: destPort
+    });
+
+    if (response.status != 200) {
+      if (process.env.NODE_ENV != "production") console.log(response);
+
+      if (response.data.error) {
+        println(`Error: ${response.data.error}\n`);
+      } else {
+        println("Error requesting connections!\n");
+      }
+
+      return;
+    }
+
+    const { data }: LookupCommandSuccess = response.data;
+
+    for (const connection of data) {
+      println("ID: %s%s:\n", connection.id, (connection.autoStart ? " (automatically starts)" : ""));
+      println(" - Backend ID: %s\n", connection.providerID);
+      println(" - Name: %s\n", connection.name);
+      if (connection.description) println(" - Description: %s\n", connection.description);
+      println(" - Source: %s:%s\n", connection.sourceIP, connection.sourcePort);
+      println(" - Destination port: %s\n", connection.destPort);
+
+      println("\n");
+    }
+
+    println("%s connections found.\n", data.length);
+  });
 
   const startTunnel = new SSHCommand(println, "start");
   startTunnel.description("Starts a tunnel");
@@ -198,7 +317,6 @@ export async function run(
     }
 
     println("Successfully stopped tunnel.\n");
-    return;
   });
 
   const getInbound = new SSHCommand(println, "get-inbound");
@@ -210,22 +328,7 @@ export async function run(
   getInbound.action(async(idStr: string, options: {
     tail?: boolean,
     tailPullRate?: string
-  }): Promise<void> => {
-    type InboundConnectionSuccess = {
-      success: true,
-      data: {
-        ip: string,
-        port: number,
-
-        connectionDetails: {
-          sourceIP: string,
-          sourcePort: number,
-          destPort: number,
-          enabled: boolean
-        }
-      }[]
-    };
-  
+  }): Promise<void> => {  
     const pullRate: number = options.tailPullRate ? parseInt(options.tailPullRate) : 2000;
     const id = parseInt(idStr);
 
@@ -304,8 +407,6 @@ export async function run(
         println(" - %s:%s\n", entry.ip, entry.port);
       }
     }
-
-    return;
   });
 
   const removeTunnel = new SSHCommand(println, "rm");
