@@ -5,6 +5,9 @@ export class SSHCommand extends Command {
   hasRecievedExitSignal: boolean;
   println: PrintLine;
 
+  exitEventHandlers: ((...any: any[]) => void)[];
+  parent: SSHCommand | null;
+
   /**
    * Modified version of the Commander command with slight automated patches, to work with our SSH environment.
    * @param println PrintLine function to use
@@ -16,6 +19,8 @@ export class SSHCommand extends Command {
     disableSSHHelpPatching: boolean = false,
   ) {
     super(name);
+
+    this.exitEventHandlers = [];
 
     this.configureOutput({
       writeOut: str => println(str),
@@ -48,13 +53,22 @@ export class SSHCommand extends Command {
 
   recvExitDispatch() {
     this.hasRecievedExitSignal = true;
+    this.exitEventHandlers.forEach((eventHandler) => eventHandler());
+
     let parentElement = this.parent;
 
     while (parentElement instanceof SSHCommand) {
       parentElement.hasRecievedExitSignal = true;
+      parentElement.exitEventHandlers.forEach((eventHandler) => eventHandler());
+
       parentElement = parentElement.parent;
     };
-  }
+  };
+
+  onExit(callback: (...any: any[]) => void) {
+    this.exitEventHandlers.push(callback);
+    if (this.hasRecievedExitSignal) callback();
+  };
 
   _exit() {
     this.recvExitDispatch();
@@ -75,6 +89,8 @@ export class SSHCommand extends Command {
     this._actionHandler = async (...args: any[]): Promise<void> => {
       if (this.hasRecievedExitSignal) return;
       await oldActionHandler(...args);
+
+      this.recvExitDispatch();
     };
 
     return this;

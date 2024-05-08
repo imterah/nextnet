@@ -16,14 +16,6 @@ export async function run(
 ) {
   if (argv.length == 1) return println("error: no arguments specified! run %s --help to see commands.\n", argv[0]);
 
-  let resolve: (value: unknown) => void;
-  let reject:  (value: unknown) => void;
-
-  const promise = new Promise((ourResolve, ourReject) => {
-    resolve = ourResolve;
-    reject = ourReject;
-  });
-
   const program = new SSHCommand(println);
   program.description("Manages connections for NextNet");
   program.version("v0.1.0-preprod");
@@ -86,7 +78,7 @@ export async function run(
 
     if (Number.isNaN(id)) {
       println("ID (%s) is not a number\n", idStr);
-      return resolve(null);
+      return;
     };
 
     const response = await axios.post("/api/v1/forward/start", {
@@ -103,11 +95,11 @@ export async function run(
         println("Error requesting connections!\n");
       }
 
-      return resolve(null);
+      return;
     }
 
     println("Successfully started tunnel.\n");
-    return resolve(null);
+    return;
   });
 
   const stopTunnel = new SSHCommand(println, "stop");
@@ -119,7 +111,7 @@ export async function run(
 
     if (Number.isNaN(id)) {
       println("ID (%s) is not a number\n", idStr);
-      return resolve(null);
+      return;
     };
 
     const response = await axios.post("/api/v1/forward/stop", {
@@ -136,11 +128,11 @@ export async function run(
         println("Error requesting connections!\n");
       }
 
-      return resolve(null);
+      return;
     }
 
     println("Successfully stopped tunnel.\n");
-    return resolve(null);
+    return;
   });
 
   const getInbound = new SSHCommand(println, "get-inbound");
@@ -173,12 +165,12 @@ export async function run(
 
     if (Number.isNaN(id)) {
       println("ID (%s) is not a number\n", idStr);
-      return resolve(null);
+      return;
     }
 
     if (Number.isNaN(pullRate)) {
       println("Pull rate is not a number\n");
-      return resolve(null);
+      return;
     }
 
     if (options.tail) {
@@ -199,7 +191,7 @@ export async function run(
             println("Error requesting connections!\n");
           }
   
-          return resolve(null);
+          return;
         }
   
         const { data }: InboundConnectionSuccess = response.data;
@@ -230,14 +222,14 @@ export async function run(
           println("Error requesting connections!\n");
         }
 
-        return resolve(null);
+        return;
       }
 
       const { data }: InboundConnectionSuccess = response.data;
 
       if (data.length == 0) {
         println("There are currently no connected clients.\n");
-        return resolve(null);
+        return;
       }
 
       println("Connected clients (for source: %s:%s):\n", data[0].connectionDetails.sourceIP, data[0].connectionDetails.sourcePort);
@@ -249,7 +241,7 @@ export async function run(
       console.log(response.data);
     }
 
-    return resolve(null);
+    return;
   });
 
   const removeTunnel = new SSHCommand(println, "rm");
@@ -264,7 +256,5 @@ export async function run(
   program.addCommand(removeTunnel);
 
   program.parse(argv);
-
-  if (program.hasRecievedExitSignal) return;
-  await promise;
+  await new Promise((resolve) => program.onExit(resolve));
 }
