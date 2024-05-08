@@ -39,6 +39,72 @@ export async function run(
   addCommand.argument("<dest_port>", "Destination port to use");
   addCommand.option("--description, -d", "Description for the tunnel");
 
+  addCommand.action(async(providerIDStr: string, name: string, protocolRaw: string, source: string, destPortRaw: string, options: {
+    description?: string
+  }) => {
+    const providerID = parseInt(providerIDStr);
+
+    if (Number.isNaN(providerID)) {
+      println("ID (%s) is not a number\n", providerIDStr);
+      return;
+    };
+
+    const protocol = protocolRaw.toLowerCase().trim();
+
+    if (protocol != "tcp" && protocol != "udp") {
+      return println("Protocol is not a valid option (not tcp or udp)\n");
+    };
+
+    const sourceSplit: string[] = source.split(":");
+
+    if (sourceSplit.length != 2) {
+      return println("Source could not be splitted down (are you missing the ':' in the source to specify port?)\n");
+    }
+
+    const sourceIP: string = sourceSplit[0];
+    const sourcePort: number = parseInt(sourceSplit[1]);
+
+    if (Number.isNaN(sourcePort)) {
+      return println("Port splitted is not a number\n");
+    }
+
+    const destinationPort: number = parseInt(destPortRaw);
+
+    if (Number.isNaN(destinationPort)) {
+      return println("Destination port could not be parsed into a number\n");
+    }
+
+    const response = await axios.post("/api/v1/forward/create", {
+      token,
+
+      name,
+      description: options.description,
+
+      protocol,
+
+      sourceIP,
+      sourcePort,
+
+      destinationPort,
+
+      providerID
+    });
+
+    if (response.status != 200) {
+      if (process.env.NODE_ENV != "production") console.log(response);
+
+      if (response.data.error) {
+        println(`Error: ${response.data.error}\n`);
+      } else {
+        println("Error requesting connections!\n");
+      }
+
+      return;
+    }
+
+    println("Successfully created connection.\n");
+  });
+
   const lookupCommand = new SSHCommand(println, "find");
 
   lookupCommand.description(
@@ -92,7 +158,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error requesting connections!\n");
+        println("Error starting the connection!\n");
       }
 
       return;
@@ -125,7 +191,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error requesting connections!\n");
+        println("Error stopping a connection!\n");
       }
 
       return;
@@ -237,8 +303,6 @@ export async function run(
       for (const entry of data) {
         println(" - %s:%s\n", entry.ip, entry.port);
       }
-
-      console.log(response.data);
     }
 
     return;
@@ -247,6 +311,34 @@ export async function run(
   const removeTunnel = new SSHCommand(println, "rm");
   removeTunnel.description("Removes a tunnel");
   removeTunnel.argument("<id>", "Tunnel ID to remove");
+
+  removeTunnel.action(async(idStr: string) => {
+    const id = parseInt(idStr);
+
+    if (Number.isNaN(id)) {
+      println("ID (%s) is not a number\n", idStr);
+      return;
+    };
+
+    const response = await axios.post("/api/v1/forward/remove", {
+      token,
+      id
+    });
+
+    if (response.status != 200) {
+      if (process.env.NODE_ENV != "production") console.log(response);
+
+      if (response.data.error) {
+        println(`Error: ${response.data.error}\n`);
+      } else {
+        println("Error deleting connection!\n");
+      }
+
+      return;
+    };
+
+    println("Successfully deleted connection.\n");
+  });
 
   program.addCommand(addCommand);
   program.addCommand(lookupCommand);
