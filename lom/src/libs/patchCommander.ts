@@ -25,7 +25,7 @@ export class SSHCommand extends Command {
     this.configureOutput({
       writeOut: str => println(str),
       writeErr: str => {
-        if (str.includes("--help") || str.includes("-h")) return;
+        if (this.hasRecievedExitSignal) return;
         println(str);
       },
     });

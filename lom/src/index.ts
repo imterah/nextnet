@@ -108,8 +108,8 @@ server.on("connection", client => {
               continue;
             }
     
-            await command.run(argv, println, axios, token);
-            stream.write(`~$ `);
+            await command.run(argv, println, axios, token, (disableEcho) => readFromKeyboard(stream, disableEcho));
+            stream.write("~$ ");
           }
         }
       });

@@ -5,12 +5,14 @@ import { run as backends } from "./commands/backends.js";
 import { run as users } from "./commands/users.js";
 
 export type PrintLine = (...str: any[]) => void;
+export type KeyboardRead = (disableEcho?: boolean) => Promise<string>;
 
 type Command = (
   args: string[],
   println: PrintLine,
   axios: Axios,
   apiKey: string,
+  keyboardRead: KeyboardRead
 ) => Promise<void>;
 
 type Commands = {

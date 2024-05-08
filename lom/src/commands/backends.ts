@@ -88,4 +88,5 @@ export async function run(
   program.addCommand(lookupBackend);
 
   program.parse(argv);
+  await new Promise((resolve) => program.onExit(resolve));
 }

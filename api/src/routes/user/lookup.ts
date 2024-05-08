@@ -60,6 +60,7 @@ export function route(routeOptions: RouteOptions) {
       return {
         success: true,
         data: users.map(i => ({
+          id: i.id,
           name: i.name,
           email: i.email,
           isServiceAccount: i.isRootServiceAccount,
