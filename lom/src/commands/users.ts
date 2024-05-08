@@ -21,6 +21,8 @@ export async function run(
   apiKey: string,
   readKeyboard: KeyboardRead
 ) {
+  if (argv.length == 1) return println("error: no arguments specified! run %s --help to see commands.\n", argv[0]);
+  
   const program = new SSHCommand(println);
   program.description("Manages users for NextNet");
   program.version("v1.0.0-testing");

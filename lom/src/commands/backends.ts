@@ -9,6 +9,8 @@ export async function run(
   axios: Axios,
   apiKey: string,
 ) {
+  if (argv.length == 1) return println("error: no arguments specified! run %s --help to see commands.\n", argv[0]);
+  
   const program = new SSHCommand(println);
   program.description("Manages backends for NextNet");
   program.version("v0.1.0-preprod");
