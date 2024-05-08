@@ -14,6 +14,8 @@ export async function run(
   axios: Axios,
   token: string,
 ) {
+  if (argv.length == 1) return println("error: no arguments specified! run %s --help to see commands.\n", argv[0]);
+
   let resolve: (value: unknown) => void;
   let reject:  (value: unknown) => void;
 
@@ -43,7 +45,6 @@ export async function run(
   );
 
   addCommand.argument("<dest_port>", "Destination port to use");
-
   addCommand.option("--description, -d", "Description for the tunnel");
 
   const lookupCommand = new SSHCommand(println, "find");
@@ -80,9 +81,67 @@ export async function run(
   startTunnel.description("Starts a tunnel");
   startTunnel.argument("<id>", "Tunnel ID to start");
 
+  startTunnel.action(async(idStr: string) => {
+    const id = parseInt(idStr);
+
+    if (Number.isNaN(id)) {
+      println("ID (%s) is not a number\n", idStr);
+      return resolve(null);
+    };
+
+    const response = await axios.post("/api/v1/forward/start", {
+      token,
+      id
+    });
+
+    if (response.status != 200) {
+      if (process.env.NODE_ENV != "production") console.log(response);
+
+      if (response.data.error) {
+        println(`Error: ${response.data.error}\n`);
+      } else {
+        println("Error requesting connections!\n");
+      }
+
+      return resolve(null);
+    }
+
+    println("Successfully started tunnel.\n");
+    return resolve(null);
+  });
+
   const stopTunnel = new SSHCommand(println, "stop");
   stopTunnel.description("Stops a tunnel");
   stopTunnel.argument("<id>", "Tunnel ID to stop");
+
+  stopTunnel.action(async(idStr: string) => {
+    const id = parseInt(idStr);
+
+    if (Number.isNaN(id)) {
+      println("ID (%s) is not a number\n", idStr);
+      return resolve(null);
+    };
+
+    const response = await axios.post("/api/v1/forward/stop", {
+      token,
+      id
+    });
+
+    if (response.status != 200) {
+      if (process.env.NODE_ENV != "production") console.log(response);
+
+      if (response.data.error) {
+        println(`Error: ${response.data.error}\n`);
+      } else {
+        println("Error requesting connections!\n");
+      }
+
+      return resolve(null);
+    }
+
+    println("Successfully stopped tunnel.\n");
+    return resolve(null);
+  });
 
   const getInbound = new SSHCommand(println, "get-inbound");
   getInbound.description("Shows all current connections");
