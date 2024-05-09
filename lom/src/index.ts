@@ -39,33 +39,76 @@ if (!keyFile) throw new Error("Somehow failed to fetch the key file!");
 
 const server: ssh2.Server = new ssh2.Server({
   hostKeys: [keyFile],
-
-  banner: "NextNet-LOM (c) NextNet project et al.",
-  greeting: "NextNet LOM (beta)",
+  banner: "NextNet-LOM (c) NextNet project et al."
 });
 
 server.on("connection", client => {
   let token: string = "";
 
+  let username: string = "";
+  let password: string = "";
+
   client.on("authentication", async auth => {
-    if (auth.method != "password") return auth.reject(["password"]); // We need to know the password to auth with the API
+    if (auth.method == "password") {
+      const response = await axios.post("/api/v1/users/login", {
+        username: auth.username,
+        password: auth.password,
+      });
+  
+      if (response.status == 403) {
+        return auth.reject(["password"]);
+      }
+  
+      token = response.data.token;
 
-    const response = await axios.post("/api/v1/users/login", {
-      username: auth.username,
-      password: auth.password,
-    });
+      username = auth.username;
+      password = auth.password;
 
-    if (response.status == 403) {
-      return auth.reject(["password"]);
+      auth.accept();
+    } else if (auth.method == "publickey") {
+      return auth.reject();
+      // todo
+    } else {
+      return auth.reject(["password", "publickey"]); 
     }
-
-    token = response.data.token;
-    auth.accept();
   });
 
   client.on("ready", () => {
     client.on("session", (accept, reject) => {
       const conn = accept();
+
+      conn.on("exec", async (accept, reject, info) => {
+        const stream = accept();
+
+        // Matches on ; and &&
+        const commandsRecv = info.command.split(/;|&&/).map((i) => i.trim());
+
+        function println(...data: any[]) {
+          stream.write(format(...data).replaceAll("\n", "\r\n"));
+        };
+
+        for (const command of commandsRecv) {
+          const argv = parseArgsStringToArgv(command);
+    
+          if (argv[0] == "exit") {
+            stream.close();
+          } else {
+            const command = commands.find(i => i.name == argv[0]);
+    
+            if (!command) {
+              stream.write(
+                `Unknown command ${argv[0]}.\r\n`,
+              );
+
+              continue;
+            }
+    
+            await command.run(argv, println, axios, token, (disableEcho) => readFromKeyboard(stream, disableEcho));
+          }
+        }
+        
+        return stream.close();
+      });
 
       // We're dumb. We don't really care.
       conn.on("pty", accept => accept());
