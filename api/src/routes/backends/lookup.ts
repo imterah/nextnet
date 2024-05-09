@@ -68,6 +68,8 @@ export function route(routeOptions: RouteOptions) {
       return {
         success: true,
         data: prismaBackends.map(i => ({
+          id: i.id,
+          
           name: i.name,
           description: i.description,
 
