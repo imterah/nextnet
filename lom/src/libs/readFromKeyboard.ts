@@ -18,75 +18,80 @@ export async function readFromKeyboard(
   let lineIndex = 0;
 
   async function eventLoop(): Promise<any> {
-    const readStreamData = stream.read();
-    if (readStreamData == null) return setTimeout(eventLoop, pullRate);
+    const readStreamDataBuf = stream.read();
+    if (readStreamDataBuf == null) return setTimeout(eventLoop, pullRate);
 
-    if (readStreamData.includes("\x03")) {
-      stream.write("^C");
-      return promise("");
-    } else if (readStreamData.includes("\r") || readStreamData.includes("\n")) {
-      return promise(line.replace("\r", ""));
-    } else if (readStreamData.includes(clientBackspace)) {
-      if (line.length == 0) return setTimeout(eventLoop, pullRate); // Here because if we do it in the parent if statement, shit breaks
-      line = line.substring(0, lineIndex - 1) + line.substring(lineIndex);
+    const readStreamData = readStreamDataBuf.toString();
 
-      if (!disableEcho) {
-        const deltaCursor = line.length - lineIndex;
-
-        if (deltaCursor == line.length) return setTimeout(eventLoop, pullRate);
-
-        if (deltaCursor < 0) {
-          // Use old technique if the delta is < 0, as the new one is tailored to the start + 1 to end - 1
-          stream.write(ourBackspace + " " + ourBackspace);
+    // Fixes several bugs (incl. potential social eng. exploits, ssh-copy-id being broken, etc)
+    for (const character of readStreamData.split("")) {
+      if (character == "\x03") {
+        stream.write("^C");
+        return promise("");
+      } else if (character == "\r" || character == "\n") {
+        return promise(line.replace("\r", ""));
+      } else if (character == clientBackspace) {
+        if (line.length == 0) return setTimeout(eventLoop, pullRate); // Here because if we do it in the parent if statement, shit breaks
+        line = line.substring(0, lineIndex - 1) + line.substring(lineIndex);
+  
+        if (!disableEcho) {
+          const deltaCursor = line.length - lineIndex;
+  
+          if (deltaCursor == line.length) return setTimeout(eventLoop, pullRate);
+  
+          if (deltaCursor < 0) {
+            // Use old technique if the delta is < 0, as the new one is tailored to the start + 1 to end - 1
+            stream.write(ourBackspace + " " + ourBackspace);
+          } else {
+            // Jump forward to the front, and remove the last character
+            stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
+  
+            // Go backwards & rerender text & go backwards again (wtf?)
+            stream.write(
+              leftEscape.repeat(deltaCursor + 1) +
+                line.substring(lineIndex - 1) +
+                leftEscape.repeat(deltaCursor + 1),
+            );
+          }
+  
+          lineIndex -= 1;
+        }
+      } else if (character == "\x1B") {
+        if (character == rightEscape) {
+          if (lineIndex + 1 > line.length) return setTimeout(eventLoop, pullRate);
+          lineIndex += 1;
+        } else if (character == leftEscape) {
+          if (lineIndex - 1 < 0) return setTimeout(eventLoop, pullRate);
+          lineIndex -= 1;
         } else {
-          // Jump forward to the front, and remove the last character
-          stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
-
-          // Go backwards & rerender text & go backwards again (wtf?)
-          stream.write(
-            leftEscape.repeat(deltaCursor + 1) +
-              line.substring(lineIndex - 1) +
-              leftEscape.repeat(deltaCursor + 1),
-          );
+          return setTimeout(eventLoop, pullRate);
         }
-
-        lineIndex -= 1;
-      }
-    } else if (readStreamData.includes("\x1B")) {
-      if (readStreamData.includes(rightEscape)) {
-        if (lineIndex + 1 > line.length) return setTimeout(eventLoop, pullRate);
-        lineIndex += 1;
-      } else if (readStreamData.includes(leftEscape)) {
-        if (lineIndex - 1 < 0) return setTimeout(eventLoop, pullRate);
-        lineIndex -= 1;
+  
+        if (!disableEcho) stream.write(character);
       } else {
-        return setTimeout(eventLoop, pullRate);
-      }
-
-      if (!disableEcho) stream.write(readStreamData);
-    } else {
-      lineIndex += readStreamData.length;
-
-      // There isn't a splice method for String prototypes. So, ugh:
-      line =
-        line.substring(0, lineIndex - 1) +
-        readStreamData +
-        line.substring(lineIndex - 1);
-
-      if (!disableEcho) {
-        let deltaCursor = line.length - lineIndex;
-
-        // wtf?
-        if (deltaCursor < 0) {
-          console.log(
-            "FIXME: somehow, our deltaCursor value is negative! please investigate me",
+        lineIndex += 1;
+  
+        // There isn't a splice method for String prototypes. So, ugh:
+        line =
+          line.substring(0, lineIndex - 1) +
+          character +
+          line.substring(lineIndex - 1);
+  
+        if (!disableEcho) {
+          let deltaCursor = line.length - lineIndex;
+  
+          // wtf?
+          if (deltaCursor < 0) {
+            console.log(
+              "FIXME: somehow, our deltaCursor value is negative! please investigate me",
+            );
+            deltaCursor = 0;
+          }
+  
+          stream.write(
+            line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor),
           );
-          deltaCursor = 0;
         }
-
-        stream.write(
-          line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor),
-        );
       }
     }
 
