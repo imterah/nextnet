@@ -111,8 +111,8 @@ server.on("connection", client => {
         if (
           rawKey.username == auth.username &&
           auth.key.algo == key.type &&
-          checkValue(auth.key.data, key.getPublicSSH()) ||
-          (auth.signature && key.verify(auth.blob as Buffer, auth.signature, auth.key.algo))
+          auth.key.data == key.getPublicSSH() &&
+          auth.signature && key.verify(auth.blob as Buffer, auth.signature, auth.key.algo)
         ) {
           console.log(" -- VERIFIED PUBLIC KEY --");
           userData.username = rawKey.username;
