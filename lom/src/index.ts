@@ -7,8 +7,16 @@ import ssh2 from "ssh2";
 
 import { readFromKeyboard } from "./libs/readFromKeyboard.js";
 import { commands } from "./commands.js";
+import { runCopyID } from "./copyID.js";
 
-let keyFile: Buffer | string | undefined;
+export type ClientKeys = {
+  publicKey: string,
+  username: string,
+  password: string,
+}[];
+
+let serverKeyFile: Buffer | string | undefined;
+let clientKeys: ClientKeys = [];
 
 const serverBaseURL: string =
   process.env.SERVER_BASE_URL ?? "http://127.0.0.1:3000/";
@@ -19,9 +27,15 @@ const axios = baseAxios.create({
 });
 
 try {
-  keyFile = await readFile("../keys/host.key");
+  clientKeys = JSON.parse(await readFile("../keys/clients.json", "utf8"));
 } catch (e) {
-  console.log("Error reading host key file! Creating new keypair...");
+  console.log("INFO: We don't have the client key file.");
+}
+
+try {
+  serverKeyFile = await readFile("../keys/host.key");
+} catch (e) {
+  console.log("ERROR: Failed to read the host key file! Creating new keypair...");
   await mkdir("../keys").catch(() => null);
 
   const keyPair: { private: string; public: string } = await new Promise(
@@ -32,13 +46,16 @@ try {
   await writeFile("../keys/host.key", keyPair.private);
   await writeFile("../keys/host.pub", keyPair.public);
 
-  keyFile = keyPair.private;
+  serverKeyFile = keyPair.private;
 }
 
-if (!keyFile) throw new Error("Somehow failed to fetch the key file!");
+if (!serverKeyFile) throw new Error("Somehow failed to fetch the key file!");
 
 const server: ssh2.Server = new ssh2.Server({
-  hostKeys: [keyFile],
+  hostKeys: [
+    serverKeyFile
+  ],
+
   banner: "NextNet-LOM (c) NextNet project et al."
 });
 
@@ -56,7 +73,7 @@ server.on("connection", client => {
       });
   
       if (response.status == 403) {
-        return auth.reject(["password"]);
+        return auth.reject(["password", "publickey"]);
       }
   
       token = response.data.token;
@@ -66,8 +83,47 @@ server.on("connection", client => {
 
       auth.accept();
     } else if (auth.method == "publickey") {
-      return auth.reject();
-      // todo
+      const userData = {
+        username: "",
+        password: ""
+      };
+
+      for (const rawKey of clientKeys) {
+        const key = ssh2.utils.parseKey(rawKey.publicKey);
+        
+        if (key instanceof Error) {
+          console.log(key);
+          continue;
+        }
+
+        console.log(auth.signature, auth.blob);
+
+        if (
+          rawKey.username == auth.username &&
+          auth.key.algo == key.type &&
+          auth.key.data == key.getPublicSSH() &&
+          auth.signature && key.verify(auth.blob as Buffer, auth.signature, auth.key.algo)
+        ) {
+          console.log(" -- VERIFIED PUBLIC KEY --");
+          userData.username = rawKey.username;
+          userData.password = rawKey.password;
+        };
+      }
+
+      if (!userData.username || !userData.password) return auth.reject(["password", "publickey"]);
+
+      const response = await axios.post("/api/v1/users/login", userData);
+  
+      if (response.status == 403) {
+        return auth.reject(["password", "publickey"]);
+      }
+  
+      token = response.data.token;
+
+      username = userData.username;
+      password = userData.password;
+
+      auth.accept();
     } else {
       return auth.reject(["password", "publickey"]); 
     }
@@ -79,6 +135,10 @@ server.on("connection", client => {
 
       conn.on("exec", async (accept, reject, info) => {
         const stream = accept();
+
+        if (info.command.includes(".ssh/authorized_keys") && info.command.startsWith("exec sh -c")) {
+          return await runCopyID(username, password, clientKeys, stream);
+        }
 
         // Matches on ; and &&
         const commandsRecv = info.command.split(/;|&&/).map((i) => i.trim());
