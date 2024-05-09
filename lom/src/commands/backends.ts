@@ -1,7 +1,7 @@
 import type { Axios } from "axios";
 
 import { SSHCommand } from "../libs/patchCommander.js";
-import type { PrintLine } from "../commands.js";
+import type { PrintLine, KeyboardRead } from "../commands.js";
 
 type BackendLookupSuccess = {
   success: boolean,
@@ -16,15 +16,28 @@ type BackendLookupSuccess = {
   }[];
 };
 
+const addRequiredOptions = {
+  ssh: [
+    "sshKey",
+    "username",
+    "host",
+  ],
+
+  passyfire: [
+    "host"
+  ]
+};
+
 export async function run(
   argv: string[],
   println: PrintLine,
   axios: Axios,
   token: string,
+  readKeyboard: KeyboardRead
 ) {
   const program = new SSHCommand(println);
   program.description("Manages backends for NextNet");
-  program.version("v0.1.0-preprod");
+  program.version("v1.0.0-testing");
 
   const addBackend = new SSHCommand(println, "add");
 
@@ -58,12 +71,12 @@ export async function run(
   );
 
   addBackend.option(
-    "-u, --username",
+    "-u, --username <user>",
     "(SSH, PassyFire) Username to authenticate with. With PassyFire, it's the username you create",
   );
 
   addBackend.option(
-    "-h, --host",
+    "-h, --host <host>",
     "(SSH, PassyFire) Host to connect to. With PassyFire, it's what you listen on",
   );
 
@@ -86,9 +99,216 @@ export async function run(
   );
 
   addBackend.option(
-    "-p, --password",
+    "-p, --password <password>",
     "(PassyFire) What password you want to use for the primary user",
   );
+
+  addBackend.action(async(name: string, provider: string, options: {
+    description?: string,
+    forceCustomParameters?: boolean,
+    customParameters?: string,
+    
+    // SSH (mostly)
+    sshKey?: string,
+    username?: string,
+    host?: string,
+
+    // PassyFire (mostly)
+    isProxied?: boolean,
+    proxiedPort?: string,
+    guest?: boolean,
+    userAsk?: boolean,
+    password?: string
+  }) => {
+    // Yes it can index for what we need it to do.
+    // @ts-ignore
+    const isUnsupportedPlatform: boolean = !addRequiredOptions[provider];
+    
+    if (isUnsupportedPlatform) {
+      println("WARNING: Platform is not natively supported by the LOM yet!\n");
+    }
+
+    let connectionDetails: string = "";
+
+    if (options.forceCustomParameters || isUnsupportedPlatform) {
+      if (typeof options.customParameters != "string") {
+        return println("ERROR: You are missing the custom parameters option!\n");
+      }
+
+      connectionDetails = options.customParameters;
+    } else if (provider == "ssh") {
+      for (const argument of addRequiredOptions["ssh"]) {
+        // No.
+        // @ts-ignore
+        const hasArgument = options[argument] as any;
+        
+        if (!hasArgument) {
+          return println("ERROR: Missing argument '%s'\n", argument);
+        };
+      };
+
+      const unstringifiedArguments: {
+        ip?: string,
+        port?: number,
+        username?: string,
+        privateKey?: string
+      } = {};
+
+      if (options.host) {
+        const sourceSplit: string[] = options.host.split(":");
+
+        const sourceIP: string = sourceSplit[0];
+        const sourcePort: number = sourceSplit.length >= 2 ? parseInt(sourceSplit[1]) : 22;
+
+        unstringifiedArguments.ip = sourceIP;
+        unstringifiedArguments.port = sourcePort;
+      }
+
+      unstringifiedArguments.username = options.username;
+      unstringifiedArguments.privateKey = options.sshKey?.replaceAll("\\n", "\n");
+
+      connectionDetails = JSON.stringify(unstringifiedArguments);
+    } else if (provider == "passyfire") {
+      for (const argument of addRequiredOptions["passyfire"]) {
+        // No.
+        // @ts-ignore
+        const hasArgument = options[argument];
+        
+        if (!hasArgument) {
+          return println("ERROR: Missing argument '%s'\n", argument);
+        };
+      };
+
+      const unstringifiedArguments: {
+        ip?: string,
+        port?: number,
+        publicPort?: number,
+        isProxied?: boolean,
+        users: {
+          username: string,
+          password: string
+        }[]
+      } = {
+        users: []
+      };
+
+      if (options.guest) {
+        unstringifiedArguments.users.push({
+          username: "guest",
+          password: "guest"
+        });
+      };
+
+      if (options.username) {
+        if (!options.password) {
+          return println("Password must not be left blank\n");
+        }
+
+        unstringifiedArguments.users.push({
+          username: options.username,
+          password: options.password
+        });
+      };
+
+      if (options.userAsk) {
+        while (true) {
+          println("Creating a user.\nUsername: ");
+          const username = await readKeyboard();
+
+          let passwordConfirmOne = "a";
+          let passwordConfirmTwo = "b";
+
+          println("\n");
+
+          while (passwordConfirmOne != passwordConfirmTwo) {
+            println("Password: ");
+            passwordConfirmOne = await readKeyboard(true);
+        
+            println("\nConfirm password: ");
+            passwordConfirmTwo = await readKeyboard(true);
+
+            println("\n");
+            
+            if (passwordConfirmOne != passwordConfirmTwo) {
+              println("Passwords do not match! Try again.\n\n");
+            }
+          }
+
+          unstringifiedArguments.users.push({
+            username,
+            password: passwordConfirmOne
+          });
+
+          println("\nShould we continue creating users? (y/n) ");
+          const shouldContinueAsking = (await readKeyboard()).toLowerCase().trim().startsWith("y");
+
+          println("\n\n");
+
+          if (!shouldContinueAsking) break;
+        }
+      }
+
+      if (unstringifiedArguments.users.length == 0) {
+        return println("No users will be created with your current arguments! You must have users set up.\n");
+      }
+
+      unstringifiedArguments.isProxied = Boolean(options.isProxied);
+      
+      if (options.proxiedPort) {
+        unstringifiedArguments.publicPort = parseInt(options.proxiedPort ?? "");
+
+        if (Number.isNaN(unstringifiedArguments.publicPort)) {
+          println("UID (%s) is not a number.\n", options.proxiedPort);
+          return;
+        }
+      }
+
+      if (options.host) {
+        const sourceSplit: string[] = options.host.split(":");
+
+        if (sourceSplit.length != 2) {
+          return println("Source could not be splitted down (are you missing the ':' in the source to specify port?)\n");
+        }
+
+        const sourceIP: string = sourceSplit[0];
+        const sourcePort: number = parseInt(sourceSplit[1]);
+
+        if (Number.isNaN(sourcePort)) {
+          println("UID (%s) is not a number.\n", sourcePort);
+          return;
+        }
+
+        unstringifiedArguments.ip = sourceIP;
+        unstringifiedArguments.port = sourcePort;
+      }
+
+      connectionDetails = JSON.stringify(unstringifiedArguments);
+    }
+
+    const response = await axios.post("/api/v1/backends/lookup", {
+      token,
+      
+      name,
+      description: options.description,
+      backend: provider,
+
+      connectionDetails
+    });
+
+    if (response.status != 200) {
+      if (process.env.NODE_ENV != "production") console.log(response);
+
+      if (response.data.error) {
+        println(`Error: ${response.data.error}\n`);
+      } else {
+        println("Error stopping a connection!\n");
+      }
+
+      return;
+    }
+
+    println("Successfully created the backend.\n");
+  });
 
   const removeBackend = new SSHCommand(println, "rm");
   removeBackend.description("Removes a backend");
@@ -102,7 +322,7 @@ export async function run(
       return;
     }
 
-    const response = await axios.post("/api/v1/backends/remove", {
+    const response = await axios.post("/api/v1/backends/create", {
       token,
       id
     });
@@ -269,7 +489,7 @@ export async function run(
 
   // It would make sense to check this, then parse argv, however this causes issues with
   // the application name not displaying correctly.
-  
+
   if (argv.length == 1) {
     println("No arguments specified!\n\n");
     program.help();
