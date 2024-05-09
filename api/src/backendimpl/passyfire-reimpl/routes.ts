@@ -47,25 +47,6 @@ export function route(instance: PassyFireBackendProvider) {
 
   for (const spoofedRoute of unsupportedSpoofedRoutes) {
     fastify.post(spoofedRoute, (req, res) => {
-      if (typeof req.body != "string")
-        return res.status(400).send({
-          error: "Invalid token",
-        });
-
-      try {
-        JSON.parse(req.body);
-      } catch (e) {
-        return res.status(400).send({
-          error: "Invalid token",
-        });
-      }
-
-      // @ts-ignore
-      if (!req.body.token)
-        return res.status(400).send({
-          error: "Invalid token",
-        });
-
       return res.status(403).send({
         error: "Invalid scope(s)",
       });
