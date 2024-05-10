@@ -11,16 +11,16 @@ import { commands } from "./commands.js";
 import { runCopyID } from "./copyID.js";
 
 export type ClientKeys = {
-  publicKey: string,
-  username: string,
-  password: string,
+  publicKey: string;
+  username: string;
+  password: string;
 }[];
 
 function checkValue(input: Buffer, allowed: Buffer): boolean {
-  const autoReject = (input.length !== allowed.length);
+  const autoReject = input.length !== allowed.length;
   if (autoReject) allowed = input;
   const isMatch = timingSafeEqual(input, allowed);
-  return (!autoReject && isMatch);
+  return !autoReject && isMatch;
 }
 
 let serverKeyFile: Buffer | string | undefined;
@@ -43,7 +43,9 @@ try {
 try {
   serverKeyFile = await readFile("../keys/host.key");
 } catch (e) {
-  console.log("ERROR: Failed to read the host key file! Creating new keypair...");
+  console.log(
+    "ERROR: Failed to read the host key file! Creating new keypair...",
+  );
   await mkdir("../keys").catch(() => null);
 
   const keyPair: { private: string; public: string } = await new Promise(
@@ -60,11 +62,9 @@ try {
 if (!serverKeyFile) throw new Error("Somehow failed to fetch the key file!");
 
 const server: ssh2.Server = new ssh2.Server({
-  hostKeys: [
-    serverKeyFile
-  ],
+  hostKeys: [serverKeyFile],
 
-  banner: "NextNet-LOM (c) NextNet project et al."
+  banner: "NextNet-LOM (c) NextNet project et al.",
 });
 
 server.on("connection", client => {
@@ -95,12 +95,12 @@ server.on("connection", client => {
     } else if (auth.method == "publickey") {
       const userData = {
         username: "",
-        password: ""
+        password: "",
       };
 
       for (const rawKey of clientKeys) {
         const key = ssh2.utils.parseKey(rawKey.publicKey);
-        
+
         if (key instanceof Error) {
           console.log(key);
           continue;
@@ -109,25 +109,27 @@ server.on("connection", client => {
         console.log(auth.signature, auth.blob);
 
         if (
-          rawKey.username == auth.username &&
-          auth.key.algo == key.type &&
-          auth.key.data == key.getPublicSSH() &&
-          auth.signature && key.verify(auth.blob as Buffer, auth.signature, auth.key.algo)
+          (rawKey.username == auth.username &&
+            auth.key.algo == key.type &&
+            checkValue(auth.key.data, key.getPublicSSH())) ||
+          (auth.signature &&
+            key.verify(auth.blob as Buffer, auth.signature, auth.key.algo))
         ) {
           console.log(" -- VERIFIED PUBLIC KEY --");
           userData.username = rawKey.username;
           userData.password = rawKey.password;
-        };
+        }
       }
 
-      if (!userData.username || !userData.password) return auth.reject(["password", "publickey"]);
+      if (!userData.username || !userData.password)
+        return auth.reject(["password", "publickey"]);
 
       const response = await axios.post("/api/v1/users/login", userData);
-  
+
       if (response.status == 403) {
         return auth.reject(["password", "publickey"]);
       }
-  
+
       token = response.data.token;
 
       username = userData.username;
@@ -146,7 +148,10 @@ server.on("connection", client => {
       conn.on("exec", async (accept, reject, info) => {
         const stream = accept();
 
-        if (info.command.includes(".ssh/authorized_keys") && info.command.startsWith("exec sh -c")) {
+        if (
+          info.command.includes(".ssh/authorized_keys") &&
+          info.command.startsWith("exec sh -c")
+        ) {
           return await runCopyID(username, password, clientKeys, stream);
         }
 
