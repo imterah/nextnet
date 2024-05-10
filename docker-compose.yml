@@ -1,6 +1,6 @@
 services:
   nextnet-api:
-    image: ghcr.io/greysoh/api:latest
+    image: ghcr.io/greysoh/nextnet:latest
     container_name: nextnet-api
     restart: always
     env_file:
@@ -11,8 +11,8 @@ services:
   # NOTE: For this to work correctly, the nextnet-api must be version > 0.1.1
   # or have a version with backported username support, incl. logins
   nextnet-lom:
-    image: ghcr.io/greysoh/nextnet-ssh:latest
-    container_name: nextnet_api
+    image: ghcr.io/greysoh/nextnet-lom:latest
+    container_name: nextnet-lom
     restart: always
     ports:
       - 2222:2222
