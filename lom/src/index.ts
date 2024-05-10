@@ -31,7 +31,7 @@ const serverBaseURL: string =
 
 const axios = baseAxios.create({
   baseURL: serverBaseURL,
-  validateStatus: () => true
+  validateStatus: () => true,
 });
 
 try {
@@ -70,7 +70,9 @@ const server: ssh2.Server = new ssh2.Server({
 server.on("connection", client => {
   let token: string = "";
 
+  // eslint-disable-next-line
   let username: string = "";
+  // eslint-disable-next-line
   let password: string = "";
 
   client.on("authentication", async auth => {
@@ -79,11 +81,11 @@ server.on("connection", client => {
         username: auth.username,
         password: auth.password,
       });
-  
+
       if (response.status == 403) {
         return auth.reject(["password", "publickey"]);
       }
-  
+
       token = response.data.token;
 
       username = auth.username;
@@ -133,12 +135,12 @@ server.on("connection", client => {
 
       auth.accept();
     } else {
-      return auth.reject(["password", "publickey"]); 
+      return auth.reject(["password", "publickey"]);
     }
   });
 
   client.on("ready", () => {
-    client.on("session", (accept, reject) => {
+    client.on("session", accept => {
       const conn = accept();
 
       conn.on("exec", async (accept, reject, info) => {
@@ -149,32 +151,32 @@ server.on("connection", client => {
         }
 
         // Matches on ; and &&
-        const commandsRecv = info.command.split(/;|&&/).map((i) => i.trim());
+        const commandsRecv = info.command.split(/;|&&/).map(i => i.trim());
 
-        function println(...data: any[]) {
+        function println(...data: unknown[]) {
           stream.write(format(...data).replaceAll("\n", "\r\n"));
-        };
+        }
 
         for (const command of commandsRecv) {
           const argv = parseArgsStringToArgv(command);
-    
+
           if (argv[0] == "exit") {
             stream.close();
           } else {
             const command = commands.find(i => i.name == argv[0]);
-    
+
             if (!command) {
-              stream.write(
-                `Unknown command ${argv[0]}.\r\n`,
-              );
+              stream.write(`Unknown command ${argv[0]}.\r\n`);
 
               continue;
             }
-    
-            await command.run(argv, println, axios, token, (disableEcho) => readFromKeyboard(stream, disableEcho));
+
+            await command.run(argv, println, axios, token, disableEcho =>
+              readFromKeyboard(stream, disableEcho),
+            );
           }
         }
-        
+
         return stream.close();
       });
 
@@ -191,26 +193,28 @@ server.on("connection", client => {
           "Welcome to NextNet LOM. Run 'help' to see commands.\r\n\r\n~$ ",
         );
 
-        function println(...data: any[]) {
+        function println(...data: unknown[]) {
           stream.write(format(...data).replaceAll("\n", "\r\n"));
-        };
+        }
 
+        // FIXME (greysoh): wtf? this isn't setting correctly.
+        // @eslint-disable-next-line
         while (true) {
           const line = await readFromKeyboard(stream);
           stream.write("\r\n");
-          
+
           if (line == "") {
             stream.write(`~$ `);
             continue;
           }
 
           const argv = parseArgsStringToArgv(line);
-    
+
           if (argv[0] == "exit") {
             stream.close();
           } else {
             const command = commands.find(i => i.name == argv[0]);
-    
+
             if (!command) {
               stream.write(
                 `Unknown command ${argv[0]}. Run 'help' to see commands.\r\n~$ `,
@@ -218,8 +222,10 @@ server.on("connection", client => {
 
               continue;
             }
-    
-            await command.run(argv, println, axios, token, (disableEcho) => readFromKeyboard(stream, disableEcho));
+
+            await command.run(argv, println, axios, token, disableEcho =>
+              readFromKeyboard(stream, disableEcho),
+            );
             stream.write("~$ ");
           }
         }

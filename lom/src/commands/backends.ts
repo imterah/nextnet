@@ -119,8 +119,7 @@ export async function run(
         password?: string;
       },
     ) => {
-      // Yes it can index for what we need it to do.
-      // @ts-expect-error
+      // @ts-expect-error: Yes it can index for what we need it to do.
       const isUnsupportedPlatform: boolean = !addRequiredOptions[provider];
 
       if (isUnsupportedPlatform) {
@@ -141,9 +140,8 @@ export async function run(
         connectionDetails = options.customParameters;
       } else if (provider == "ssh") {
         for (const argument of addRequiredOptions["ssh"]) {
-          // No.
-          // @ts-expect-error
-          const hasArgument = options[argument] as any;
+          // @ts-expect-error: No.
+          const hasArgument = options[argument];
 
           if (!hasArgument) {
             return println("ERROR: Missing argument '%s'\n", argument);
@@ -177,8 +175,7 @@ export async function run(
         connectionDetails = JSON.stringify(unstringifiedArguments);
       } else if (provider == "passyfire") {
         for (const argument of addRequiredOptions["passyfire"]) {
-          // No.
-          // @ts-expect-error
+          // @ts-expect-error: No.
           const hasArgument = options[argument];
 
           if (!hasArgument) {
@@ -218,7 +215,9 @@ export async function run(
         }
 
         if (options.userAsk) {
-          while (true) {
+          let shouldContinueAsking: boolean = true;
+
+          while (shouldContinueAsking) {
             println("Creating a user.\nUsername: ");
             const username = await readKeyboard();
 
@@ -247,14 +246,12 @@ export async function run(
             });
 
             println("\nShould we continue creating users? (y/n) ");
-            const shouldContinueAsking = (await readKeyboard())
+            shouldContinueAsking = (await readKeyboard())
               .toLowerCase()
               .trim()
               .startsWith("y");
 
             println("\n\n");
-
-            if (!shouldContinueAsking) break;
           }
         }
 
@@ -420,6 +417,7 @@ export async function run(
             // We don't know what we're recieving. We just try to parse it (hence the any type)
             // {} is more accurate but TS yells at us if we do that :(
 
+            // eslint-disable-next-line
             let parsedJSONData: any | undefined;
 
             try {

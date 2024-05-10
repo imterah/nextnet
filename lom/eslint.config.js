@@ -4,7 +4,17 @@ import tseslint from "typescript-eslint";
 
 
 export default [
-  {languageOptions: { globals: globals.node }},
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
+
+  {
+    languageOptions: {
+      globals: globals.node,
+    },
+
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-constant-condition": "warn"
+    }
+  },
 ];

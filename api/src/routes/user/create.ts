@@ -29,7 +29,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-expect-error
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         name: string;
         email: string;
@@ -87,9 +87,9 @@ export function route(routeOptions: RouteOptions) {
       }
 
       if (options.allowUnsafeGlobalTokens) {
-        // @ts-expect-error
+        // @ts-expect-error: Setting this correctly is a goddamn mess, but this is safe to an extent. It won't crash at least
         userData.rootToken = generateRandomData();
-        // @ts-expect-error
+        // @ts-expect-error: Read above.
         userData.isRootServiceAccount = true;
       }
 
