@@ -30,7 +30,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error
       const body: {
         token: string;
         id: number;
@@ -59,7 +59,7 @@ export function route(routeOptions: RouteOptions) {
         });
 
       // Other restrictions in place make it so that it MUST be either TCP or UDP
-      // @ts-ignore
+      // @ts-expect-error
       const protocol: "tcp" | "udp" = forward.protocol;
 
       backends[forward.destProviderID].addConnection(

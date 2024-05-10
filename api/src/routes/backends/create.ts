@@ -35,7 +35,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error
       const body: {
         token: string;
         name: string;

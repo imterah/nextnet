@@ -92,7 +92,7 @@ export class SSHBackendProvider implements BackendBaseClass {
       this.logs.push(`Failed to start SSHBackendProvider! Error: '${e}'`);
       this.state = "stopped";
 
-      // @ts-ignore
+      // @ts-expect-error
       this.sshInstance = null;
 
       return false;
@@ -112,7 +112,7 @@ export class SSHBackendProvider implements BackendBaseClass {
 
     this.sshInstance.dispose();
 
-    // @ts-ignore
+    // @ts-expect-error
     this.sshInstance = null;
 
     this.logs.push("Successfully stopped SSHBackendProvider.");
@@ -255,7 +255,7 @@ export class SSHBackendProvider implements BackendBaseClass {
   static checkParametersBackendInstance(data: string): ParameterReturnedValue {
     try {
       parseBackendProviderString(data);
-      // @ts-ignore
+      // @ts-expect-error
     } catch (e: Error) {
       return {
         success: false,
