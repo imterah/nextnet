@@ -1,4 +1,4 @@
-name: Labeler
+name: Label Issues / Pull Requests
 on: [pull_request_target]
 
 jobs:
