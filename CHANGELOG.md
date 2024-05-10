@@ -1,5 +1,7 @@
 # Changelog
 
+## [v1.0.0](https://github.com/greysoh/nextnet/tree/v1.0.0) (2024-05-10)
+
 ## [v0.1.1](https://github.com/greysoh/nextnet/tree/v0.1.1) (2024-05-05)
 
 ## [v0.1.0](https://github.com/greysoh/nextnet/tree/v0.1.0) (2024-05-05)
