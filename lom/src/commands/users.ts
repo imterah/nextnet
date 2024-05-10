@@ -80,8 +80,7 @@ export async function run(
 
         password = passwordConfirmOne;
       } else {
-        // From the first check we do, we know this is safe (you MUST specify a password)
-        // @ts-expect-error
+        // @ts-expect-error: From the first check we do, we know this is safe (you MUST specify a password)
         password = options.password;
       }
 
@@ -120,7 +119,7 @@ export async function run(
       return;
     }
 
-    let response = await axios.post("/api/v1/users/remove", {
+    const response = await axios.post("/api/v1/users/remove", {
       token: apiKey,
       uid,
     });

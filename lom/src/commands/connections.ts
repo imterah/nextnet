@@ -382,6 +382,8 @@ export async function run(
       if (options.tail) {
         let previousEntries: string[] = [];
 
+        // FIXME?
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const response = await axios.post("/api/v1/forward/connections", {
             token,
@@ -407,6 +409,7 @@ export async function run(
             simplifiedArray,
             previousEntries,
           );
+
           const removedItems: string[] = difference(
             previousEntries,
             simplifiedArray,

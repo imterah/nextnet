@@ -31,7 +31,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-expect-error
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         token: string;
         id?: number;
@@ -64,7 +64,7 @@ export function route(routeOptions: RouteOptions) {
           name: i.name,
           email: i.email,
           isServiceAccount: i.isRootServiceAccount,
-          username: i.username
+          username: i.username,
         })),
       };
     },

@@ -20,27 +20,28 @@ export function route(routeOptions: RouteOptions) {
           properties: {
             email: { type: "string" },
             username: { type: "string" },
-            password: { type: "string" }
+            password: { type: "string" },
           },
         },
       },
     },
     async (req, res) => {
-      // @ts-expect-error
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         email?: string;
         username?: string;
         password: string;
       } = req.body;
 
-      if (!body.email && !body.username) return res.status(400).send({
-        error: "missing both email and username. please supply at least one."
-      });
+      if (!body.email && !body.username)
+        return res.status(400).send({
+          error: "missing both email and username. please supply at least one.",
+        });
 
       const userSearch = await prisma.user.findFirst({
         where: {
           email: body.email,
-          username: body.username
+          username: body.username,
         },
       });
 

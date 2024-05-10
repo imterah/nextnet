@@ -5,7 +5,7 @@ export class SSHCommand extends Command {
   hasRecievedExitSignal: boolean;
   println: PrintLine;
 
-  exitEventHandlers: ((...any: any[]) => void)[];
+  exitEventHandlers: ((...any: unknown[]) => void)[];
   parent: SSHCommand | null;
 
   /**
@@ -81,11 +81,11 @@ export class SSHCommand extends Command {
   action(fn: (...args: any[]) => void | Promise<void>): this {
     super.action(fn);
 
-    // @ts-expect-error
+    // @ts-expect-error: This parameter is private, but we need control over it.
     // prettier-ignore
     const oldActionHandler: (...args: any[]) => void | Promise<void> = this._actionHandler;
 
-    // @ts-expect-error
+    // @ts-expect-error: Overriding private parameters (but this works)
     this._actionHandler = async (...args: any[]): Promise<void> => {
       if (this.hasRecievedExitSignal) return;
       await oldActionHandler(...args);

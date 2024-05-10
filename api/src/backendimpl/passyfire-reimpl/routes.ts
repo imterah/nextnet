@@ -69,7 +69,7 @@ export function route(instance: PassyFireBackendProvider) {
       },
     },
     (req, res) => {
-      // @ts-expect-error
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         username: string;
         password: string;
@@ -115,7 +115,7 @@ export function route(instance: PassyFireBackendProvider) {
       },
     },
     async (req, res) => {
-      // @ts-expect-error
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         token: string;
       } = req.body;
@@ -132,8 +132,7 @@ export function route(instance: PassyFireBackendProvider) {
         req.hostname.indexOf(":") + 1,
       );
 
-      // @ts-expect-error
-      // parseInt(...) can take a number just fine, at least in Node.JS
+      // @ts-expect-error: parseInt(...) can take a number just fine, at least in Node.JS
       const port = parseInt(unparsedPort == "" ? proxiedPort : unparsedPort);
 
       // This protocol is so confusing. I'm sorry.

@@ -50,7 +50,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-expect-error
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         token: string;
 
