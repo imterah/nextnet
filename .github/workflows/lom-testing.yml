@@ -1,6 +1,9 @@
 name: CI Testing (LOM)
 
 on:
+  pull_request:
+    paths:
+      - "api/**"
   push:
     paths:
       - "api/**"
