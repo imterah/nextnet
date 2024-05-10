@@ -27,7 +27,7 @@ export const permissionListDisabled: Record<string, boolean> = {
 };
 
 // FIXME: This solution fucking sucks.
-export let permissionListEnabled: Record<string, boolean> = JSON.parse(
+export const permissionListEnabled: Record<string, boolean> = JSON.parse(
   JSON.stringify(permissionListDisabled),
 );
 

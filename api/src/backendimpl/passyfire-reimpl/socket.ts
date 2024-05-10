@@ -57,7 +57,7 @@ export function requestHandler(
   let state: "authentication" | "data" = "authentication";
   let socket: dgram.Socket | net.Socket | undefined;
 
-  // @ts-ignore
+  // @ts-expect-error
   let connectedClient: ConnectedClientExt = {};
 
   ws.on("close", () => {

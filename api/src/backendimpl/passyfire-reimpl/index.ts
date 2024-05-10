@@ -216,7 +216,7 @@ export class PassyFireBackendProvider implements BackendBaseClass {
   static checkParametersBackendInstance(data: string): ParameterReturnedValue {
     try {
       parseBackendProviderString(data);
-      // @ts-ignore
+      // @ts-expect-error
     } catch (e: Error) {
       return {
         success: false,

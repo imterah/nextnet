@@ -26,7 +26,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error
       const body: {
         email?: string;
         username?: string;

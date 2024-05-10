@@ -29,7 +29,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error
       const body: {
         name: string;
         email: string;
@@ -87,9 +87,9 @@ export function route(routeOptions: RouteOptions) {
       }
 
       if (options.allowUnsafeGlobalTokens) {
-        // @ts-ignore
+        // @ts-expect-error
         userData.rootToken = generateRandomData();
-        // @ts-ignore
+        // @ts-expect-error
         userData.isRootServiceAccount = true;
       }
 

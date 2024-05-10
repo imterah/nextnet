@@ -69,7 +69,7 @@ export function route(instance: PassyFireBackendProvider) {
       },
     },
     (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error
       const body: {
         username: string;
         password: string;
@@ -115,7 +115,7 @@ export function route(instance: PassyFireBackendProvider) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error
       const body: {
         token: string;
       } = req.body;
@@ -132,7 +132,7 @@ export function route(instance: PassyFireBackendProvider) {
         req.hostname.indexOf(":") + 1,
       );
 
-      // @ts-ignore
+      // @ts-expect-error
       // parseInt(...) can take a number just fine, at least in Node.JS
       const port = parseInt(unparsedPort == "" ? proxiedPort : unparsedPort);
 
