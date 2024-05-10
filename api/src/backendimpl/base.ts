@@ -1,3 +1,5 @@
+// @eslint-ignore-file
+
 export type ParameterReturnedValue = {
   success: boolean;
   message?: string;

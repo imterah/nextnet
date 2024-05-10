@@ -5,7 +5,7 @@ export class SSHCommand extends Command {
   hasRecievedExitSignal: boolean;
   println: PrintLine;
 
-  exitEventHandlers: ((...any: any[]) => void)[];
+  exitEventHandlers: ((...any: unknown[]) => void)[];
   parent: SSHCommand | null;
 
   /**
@@ -53,22 +53,22 @@ export class SSHCommand extends Command {
 
   recvExitDispatch() {
     this.hasRecievedExitSignal = true;
-    this.exitEventHandlers.forEach((eventHandler) => eventHandler());
+    this.exitEventHandlers.forEach(eventHandler => eventHandler());
 
     let parentElement = this.parent;
 
     while (parentElement instanceof SSHCommand) {
       parentElement.hasRecievedExitSignal = true;
-      parentElement.exitEventHandlers.forEach((eventHandler) => eventHandler());
+      parentElement.exitEventHandlers.forEach(eventHandler => eventHandler());
 
       parentElement = parentElement.parent;
-    };
-  };
+    }
+  }
 
   onExit(callback: (...any: any[]) => void) {
     this.exitEventHandlers.push(callback);
     if (this.hasRecievedExitSignal) callback();
-  };
+  }
 
   _exit() {
     this.recvExitDispatch();
@@ -81,11 +81,11 @@ export class SSHCommand extends Command {
   action(fn: (...args: any[]) => void | Promise<void>): this {
     super.action(fn);
 
-    // @ts-ignore
+    // @ts-expect-error: This parameter is private, but we need control over it.
     // prettier-ignore
     const oldActionHandler: (...args: any[]) => void | Promise<void> = this._actionHandler;
 
-    // @ts-ignore
+    // @ts-expect-error: Overriding private parameters (but this works)
     this._actionHandler = async (...args: any[]): Promise<void> => {
       if (this.hasRecievedExitSignal) return;
       await oldActionHandler(...args);

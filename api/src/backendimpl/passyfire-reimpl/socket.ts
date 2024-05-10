@@ -14,7 +14,7 @@ function authenticateSocket(
   ws: WebSocket,
   message: string,
   state: ConnectedClientExt,
-): Boolean {
+): boolean {
   if (!message.startsWith("Accept: ")) {
     ws.send("400 Bad Request");
     return false;
@@ -57,8 +57,8 @@ export function requestHandler(
   let state: "authentication" | "data" = "authentication";
   let socket: dgram.Socket | net.Socket | undefined;
 
-  // @ts-ignore
-  let connectedClient: ConnectedClientExt = {};
+  // @ts-expect-error: FIXME because this is a mess
+  const connectedClient: ConnectedClientExt = {};
 
   ws.on("close", () => {
     instance.clients.splice(

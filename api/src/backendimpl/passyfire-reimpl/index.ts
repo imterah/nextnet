@@ -55,7 +55,7 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
 
   if (typeof jsonData.ip != "string")
     throw new Error("IP field is not a string");
-  
+
   if (typeof jsonData.port != "number") throw new Error("Port is not a number");
 
   if (
@@ -63,7 +63,7 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
     typeof jsonData.publicPort != "number"
   )
     throw new Error("(optional field) Proxied port is not a number");
-  
+
   if (
     typeof jsonData.isProxied != "undefined" &&
     typeof jsonData.isProxied != "boolean"
@@ -216,7 +216,7 @@ export class PassyFireBackendProvider implements BackendBaseClass {
   static checkParametersBackendInstance(data: string): ParameterReturnedValue {
     try {
       parseBackendProviderString(data);
-      // @ts-ignore
+      // @ts-expect-error: We write the function, and we know we're returning an error
     } catch (e: Error) {
       return {
         success: false,

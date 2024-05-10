@@ -1,6 +1,8 @@
 import type { ServerChannel } from "ssh2";
 
-const pullRate = process.env.KEYBOARD_PULLING_RATE ? parseInt(process.env.KEYBOARD_PULLING_RATE) : 5;
+const pullRate = process.env.KEYBOARD_PULLING_RATE
+  ? parseInt(process.env.KEYBOARD_PULLING_RATE)
+  : 5;
 
 const leftEscape = "\x1B[D";
 const rightEscape = "\x1B[C";
@@ -33,19 +35,20 @@ export async function readFromKeyboard(
       } else if (character == clientBackspace) {
         if (line.length == 0) return setTimeout(eventLoop, pullRate); // Here because if we do it in the parent if statement, shit breaks
         line = line.substring(0, lineIndex - 1) + line.substring(lineIndex);
-  
+
         if (!disableEcho) {
           const deltaCursor = line.length - lineIndex;
-  
-          if (deltaCursor == line.length) return setTimeout(eventLoop, pullRate);
-  
+
+          if (deltaCursor == line.length)
+            return setTimeout(eventLoop, pullRate);
+
           if (deltaCursor < 0) {
             // Use old technique if the delta is < 0, as the new one is tailored to the start + 1 to end - 1
             stream.write(ourBackspace + " " + ourBackspace);
           } else {
             // Jump forward to the front, and remove the last character
             stream.write(rightEscape.repeat(deltaCursor) + " " + ourBackspace);
-  
+
             // Go backwards & rerender text & go backwards again (wtf?)
             stream.write(
               leftEscape.repeat(deltaCursor + 1) +
@@ -53,12 +56,13 @@ export async function readFromKeyboard(
                 leftEscape.repeat(deltaCursor + 1),
             );
           }
-  
+
           lineIndex -= 1;
         }
       } else if (character == "\x1B") {
         if (character == rightEscape) {
-          if (lineIndex + 1 > line.length) return setTimeout(eventLoop, pullRate);
+          if (lineIndex + 1 > line.length)
+            return setTimeout(eventLoop, pullRate);
           lineIndex += 1;
         } else if (character == leftEscape) {
           if (lineIndex - 1 < 0) return setTimeout(eventLoop, pullRate);
@@ -66,20 +70,20 @@ export async function readFromKeyboard(
         } else {
           return setTimeout(eventLoop, pullRate);
         }
-  
+
         if (!disableEcho) stream.write(character);
       } else {
         lineIndex += 1;
-  
+
         // There isn't a splice method for String prototypes. So, ugh:
         line =
           line.substring(0, lineIndex - 1) +
           character +
           line.substring(lineIndex - 1);
-  
+
         if (!disableEcho) {
           let deltaCursor = line.length - lineIndex;
-  
+
           // wtf?
           if (deltaCursor < 0) {
             console.log(
@@ -87,7 +91,7 @@ export async function readFromKeyboard(
             );
             deltaCursor = 0;
           }
-  
+
           stream.write(
             line.substring(lineIndex - 1) + leftEscape.repeat(deltaCursor),
           );
@@ -96,7 +100,7 @@ export async function readFromKeyboard(
     }
 
     setTimeout(eventLoop, pullRate);
-  };
+  }
 
   return new Promise(resolve => {
     setTimeout(eventLoop, pullRate);

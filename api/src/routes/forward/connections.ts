@@ -27,7 +27,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         token: string;
         id: number;
@@ -59,8 +59,12 @@ export function route(routeOptions: RouteOptions) {
 
       return {
         success: true,
-        data: backends[forward.destProviderID].getAllConnections().filter((i) => {
-          return i.connectionDetails.sourceIP == forward.sourceIP && i.connectionDetails.sourcePort == forward.sourcePort && i.connectionDetails.destPort == forward.destPort;
+        data: backends[forward.destProviderID].getAllConnections().filter(i => {
+          return (
+            i.connectionDetails.sourceIP == forward.sourceIP &&
+            i.connectionDetails.sourcePort == forward.sourcePort &&
+            i.connectionDetails.destPort == forward.destPort
+          );
         }),
       };
     },

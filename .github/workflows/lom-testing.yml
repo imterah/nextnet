@@ -1,0 +1,40 @@
+name: CI Testing (LOM)
+
+on:
+  pull_request:
+    paths:
+      - "api/**"
+  push:
+    paths:
+      - "api/**"
+
+defaults:
+  run:
+    working-directory: lom
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code using Git
+        uses: actions/checkout@main
+      
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      
+      - name: Install dependencies
+        run: npm install --save-dev
+      
+      - name: Build source
+        run: npm run build
+
+      - name: Run eslint
+        run: npx eslint src
+
+      - name: Run prettier to verify if we're formatted or not
+        uses: creyD/prettier_action@v4.3
+        with:
+          dry: true

@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 shopt -s globstar
-"$(git rev-parse --show-toplevel)"/api/node_modules/.bin/prettier --ignore-unknown --write $(git rev-parse --show-toplevel)/{api,lom}/src/**/*.ts
+set -e
+
+pushd $(git rev-parse --show-toplevel)/api
+npx eslint src
+popd
+
+pushd $(git rev-parse --show-toplevel)/lom
+npx eslint src
+popd
+
+# Formatting step
+"$(git rev-parse --show-toplevel)"/api/node_modules/.bin/prettier --ignore-unknown --write $(git rev-parse --show-toplevel)/{api,lom}/{eslint.config.js,src/**/*.ts}
 rustfmt $(git rev-parse --show-toplevel)/gui/src/**/*.rs
 git update-index --again
 exit 0

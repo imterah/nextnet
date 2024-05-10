@@ -4,7 +4,7 @@ import { run as connection } from "./commands/connections.js";
 import { run as backends } from "./commands/backends.js";
 import { run as users } from "./commands/users.js";
 
-export type PrintLine = (...str: any[]) => void;
+export type PrintLine = (...str: unknown[]) => void;
 export type KeyboardRead = (disableEcho?: boolean) => Promise<string>;
 
 type Command = (
@@ -12,7 +12,7 @@ type Command = (
   println: PrintLine,
   axios: Axios,
   apiKey: string,
-  keyboardRead: KeyboardRead
+  keyboardRead: KeyboardRead,
 ) => Promise<void>;
 
 type Commands = {
@@ -30,7 +30,9 @@ export const commands: Commands = [
         printf(`${command.name}: ${command.description}\n`);
       });
 
-      printf("\nRun a command of your choosing with --help to see more options.\n");
+      printf(
+        "\nRun a command of your choosing with --help to see more options.\n",
+      );
     },
   },
   {
@@ -43,21 +45,21 @@ export const commands: Commands = [
   {
     name: "conn",
     description: "Manages connections for NextNet",
-    run: connection
+    run: connection,
   },
   {
     name: "user",
     description: "Manages users for NextNet",
-    run: users
+    run: users,
   },
   {
     name: "backend",
     description: "Manages backends for NextNet",
-    run: backends
+    run: backends,
   },
   {
     name: "back",
     description: "(alias) Manages backends for NextNet",
-    run: backends
-  }
+    run: backends,
+  },
 ];

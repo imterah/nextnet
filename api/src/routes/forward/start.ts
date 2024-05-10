@@ -30,7 +30,7 @@ export function route(routeOptions: RouteOptions) {
       },
     },
     async (req, res) => {
-      // @ts-ignore
+      // @ts-expect-error: Fastify routes schema parsing is trustworthy, so we can "assume" invalid types
       const body: {
         token: string;
         id: number;
@@ -58,8 +58,7 @@ export function route(routeOptions: RouteOptions) {
           error: "Backend not found",
         });
 
-      // Other restrictions in place make it so that it MUST be either TCP or UDP
-      // @ts-ignore
+      // @ts-expect-error: Other restrictions in place make it so that it MUST be either TCP or UDP
       const protocol: "tcp" | "udp" = forward.protocol;
 
       backends[forward.destProviderID].addConnection(
