@@ -5,9 +5,11 @@ modifies ci:
 modifies docker:
   - '**/Dockerfile'
   - '**/docker-compose.yml'
-  - '**/*.env'
+  - '**/prod-docker.env'
 modifies api:
   - api/**/*
+modifies lom:
+  - lom/**/*
 modifies gui:
   - gui/**/*
 modifies nix:
