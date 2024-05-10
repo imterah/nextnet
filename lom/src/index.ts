@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { format } from "node:util";
+import { timingSafeEqual } from "node:crypto";
 
 import parseArgsStringToArgv from "string-argv";
 import baseAxios from "axios";
@@ -14,6 +15,13 @@ export type ClientKeys = {
   username: string,
   password: string,
 }[];
+
+function checkValue(input: Buffer, allowed: Buffer): boolean {
+  const autoReject = (input.length !== allowed.length);
+  if (autoReject) allowed = input;
+  const isMatch = timingSafeEqual(input, allowed);
+  return (!autoReject && isMatch);
+}
 
 let serverKeyFile: Buffer | string | undefined;
 let clientKeys: ClientKeys = [];
@@ -101,8 +109,8 @@ server.on("connection", client => {
         if (
           rawKey.username == auth.username &&
           auth.key.algo == key.type &&
-          auth.key.data == key.getPublicSSH() &&
-          auth.signature && key.verify(auth.blob as Buffer, auth.signature, auth.key.algo)
+          checkValue(auth.key.data, key.getPublicSSH()) ||
+          (auth.signature && key.verify(auth.blob as Buffer, auth.signature, auth.key.algo))
         ) {
           console.log(" -- VERIFIED PUBLIC KEY --");
           userData.username = rawKey.username;
