@@ -63,7 +63,6 @@ if (!serverKeyFile) throw new Error("Somehow failed to fetch the key file!");
 
 const server: ssh2.Server = new ssh2.Server({
   hostKeys: [serverKeyFile],
-
   banner: "NextNet-LOM (c) NextNet project et al.",
 });
 
