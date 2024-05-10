@@ -103,7 +103,7 @@ jobs:
         run: |
           docker tag ghcr.io/greysoh/nextnet:$(cat VERSION) ghcr.io/greysoh/nextnet:latest
           docker push ghcr.io/greysoh/nextnet:$(cat VERSION)
-          docker push ghcr.io/greysoh/netxtnet:latest
+          docker push ghcr.io/greysoh/nextnet:latest
 
           docker tag ghcr.io/greysoh/nextnet-lom:$(cat VERSION) ghcr.io/greysoh/nextnet-lom:latest
           docker push ghcr.io/greysoh/nextnet-lom:$(cat VERSION)
