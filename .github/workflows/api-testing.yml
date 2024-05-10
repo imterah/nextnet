@@ -13,7 +13,7 @@ defaults:
     working-directory: api
 
 env:
-  DATABASE_URL: "postgresql://nextnet:nextnet@127.0.0.1:5432/nextnet?schema=nextnet"
+  DATABASE_URL: "postgresql://nextnet:nextnet@localhost:5432/nextnet?schema=nextnet"
 
 jobs:
   test:
@@ -23,8 +23,8 @@ jobs:
       postgres:
         image: postgres
         env:
-          POSTGRES_USERNAME: nextnet
           POSTGRES_PASSWORD: nextnet
+          POSTGRES_USER: nextnet
           POSTGRES_DB: nextnet
         options: >-
           --health-cmd pg_isready
