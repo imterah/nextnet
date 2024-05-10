@@ -7,8 +7,10 @@ on:
   push:
     paths:
       - "api/**"
-    tags-ignore:
-      - "*"
+  
+defaults:
+  run:
+    working-directory: api
 
 jobs:
   test:
@@ -39,19 +41,15 @@ jobs:
           node-version: 20.x
       
       - name: Install dependencies
-        working-directory: api
         run: npm install --save-dev
 
       - name: Install prisma
-        working-directory: api
         run: npx prisma migrate dev
       
       - name: Build source
-        working-directory: api
         run: npm build
 
       - name: Run eslint
-        working-directory: api
         run: npx eslint src              
 
       - name: Run prettier to verify if we're formatted or not
