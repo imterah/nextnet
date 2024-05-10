@@ -25,7 +25,7 @@ export async function run(
 
   const program = new SSHCommand(println);
   program.description("Manages users for NextNet");
-  program.version("v1.0.0-testing");
+  program.version("v1.0.0");
 
   const addCommand = new SSHCommand(println, "add");
   addCommand.description("Create a new user");
@@ -88,7 +88,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error requesting connections!\n");
+        println("Error creating users!\n");
       }
 
       return;
@@ -164,7 +164,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error finding user!\n");
+        println("Error finding users!\n");
       }
 
       return;

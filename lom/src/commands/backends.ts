@@ -37,7 +37,7 @@ export async function run(
 ) {
   const program = new SSHCommand(println);
   program.description("Manages backends for NextNet");
-  program.version("v1.0.0-testing");
+  program.version("v1.0.0");
 
   const addBackend = new SSHCommand(println, "add");
 
@@ -285,7 +285,7 @@ export async function run(
       connectionDetails = JSON.stringify(unstringifiedArguments);
     }
 
-    const response = await axios.post("/api/v1/backends/lookup", {
+    const response = await axios.post("/api/v1/backends/create", {
       token,
       
       name,
@@ -301,7 +301,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error stopping a connection!\n");
+        println("Error creating a backend!\n");
       }
 
       return;
@@ -322,7 +322,7 @@ export async function run(
       return;
     }
 
-    const response = await axios.post("/api/v1/backends/create", {
+    const response = await axios.post("/api/v1/backends/remove", {
       token,
       id
     });
@@ -383,7 +383,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error stopping a connection!\n");
+        println("Error looking up backends!\n");
       }
 
       return;
@@ -467,7 +467,7 @@ export async function run(
       if (response.data.error) {
         println(`Error: ${response.data.error}\n`);
       } else {
-        println("Error stopping a connection!\n");
+        println("Error getting logs!\n");
       }
 
       return;
