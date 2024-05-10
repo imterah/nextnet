@@ -3,6 +3,10 @@
     "target": "es2021",
     "module": "es2022",
     "moduleResolution": "node",
+
+    "lib": [
+      "es2021"
+    ],
     
     "outDir": "./out",
     "rootDir": "./src",
