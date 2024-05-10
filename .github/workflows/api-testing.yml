@@ -1,6 +1,9 @@
 name: CI Testing (API)
 
 on:
+  pull_request:
+    paths:
+      - "api/**"
   push:
     paths:
       - "api/**"
