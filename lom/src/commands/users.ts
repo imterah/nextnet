@@ -43,6 +43,8 @@ export async function run(
     "Asks for a password. Hides output",
   );
 
+  addCommand.option("-s, --service-account, --service", "Turns the user into a service account");
+
   addCommand.action(
     async (
       username: string,
@@ -51,6 +53,7 @@ export async function run(
       options: {
         password?: string;
         askPassword?: boolean;
+        isServiceAccount?: boolean;
       },
     ) => {
       if (!options.password && !options.askPassword) {
@@ -89,6 +92,8 @@ export async function run(
         username,
         email,
         password,
+
+        allowUnsafeGlobalTokens: options.isServiceAccount
       });
 
       if (response.status != 200) {
@@ -103,7 +108,7 @@ export async function run(
         return;
       }
 
-      println("User created successfully.\n");
+      println("User created successfully.\nToken: %s\n", response.data.token);
     },
   );
 
