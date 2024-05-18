@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.1](https://github.com/greysoh/nextnet/tree/v1.0.1) (2024-05-18)
+
+**Merged pull requests:**
+
+- Adds public key authentication [\#6](https://github.com/greysoh/nextnet/pull/6)
+- Add support for eslint [\#5](https://github.com/greysoh/nextnet/pull/5)
+
 ## [v1.0.0](https://github.com/greysoh/nextnet/tree/v1.0.0) (2024-05-10)
 
 ## [v0.1.1](https://github.com/greysoh/nextnet/tree/v0.1.1) (2024-05-05)
