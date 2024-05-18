@@ -43,7 +43,10 @@ export async function run(
     "Asks for a password. Hides output",
   );
 
-  addCommand.option("-s, --service-account, --service", "Turns the user into a service account");
+  addCommand.option(
+    "-s, --service-account, --service",
+    "Turns the user into a service account",
+  );
 
   addCommand.action(
     async (
@@ -93,7 +96,7 @@ export async function run(
         email,
         password,
 
-        allowUnsafeGlobalTokens: options.isServiceAccount
+        allowUnsafeGlobalTokens: options.isServiceAccount,
       });
 
       if (response.status != 200) {

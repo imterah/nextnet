@@ -13,7 +13,7 @@ export async function runCopyID(
   stream.write(
     "Hey there! I think you're using ssh-copy-id. If this is an error, you may close this terminal.\n",
   );
-  
+
   stream.write("Please wait...\n");
 
   const keyData = await readFromKeyboard(stream, true);

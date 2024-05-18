@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { format } from "node:util";
 import { timingSafeEqual } from "node:crypto";
+import { format } from "node:util";
 
 import parseArgsStringToArgv from "string-argv";
 import baseAxios from "axios";

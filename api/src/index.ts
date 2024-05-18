@@ -57,19 +57,22 @@ const backends: Record<number, BackendBaseClass> = {};
 const loggerEnv = {
   development: {
     transport: {
-      target: 'pino-pretty',
+      target: "pino-pretty",
       options: {
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname,time',
+        translateTime: "HH:MM:ss Z",
+        ignore: "pid,hostname,time",
       },
     },
   },
   production: true,
   test: false,
-}
+};
 
 const fastify = Fastify({
-  logger: (process.env.NODE_ENV != "production" ? loggerEnv.development : loggerEnv.production),
+  logger:
+    process.env.NODE_ENV == "production"
+      ? loggerEnv.production
+      : loggerEnv.development,
   trustProxy: Boolean(process.env.IS_BEHIND_PROXY),
 });
 
