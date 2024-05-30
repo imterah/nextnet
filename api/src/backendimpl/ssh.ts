@@ -30,16 +30,21 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
 
   const jsonData = JSON.parse(data);
 
-  if (typeof jsonData.ip != "string")
+  if (typeof jsonData.ip != "string") {
     throw new Error("IP field is not a string");
+  }
 
-  if (typeof jsonData.port != "number") throw new Error("Port is not a number");
+  if (typeof jsonData.port != "number") {
+    throw new Error("Port is not a number");
+  }
 
-  if (typeof jsonData.username != "string")
+  if (typeof jsonData.username != "string") {
     throw new Error("Username is not a string");
+  }
 
-  if (typeof jsonData.privateKey != "string")
+  if (typeof jsonData.privateKey != "string") {
     throw new Error("Private key is not a string");
+  }
 
   return {
     ip: jsonData.ip,
@@ -133,6 +138,7 @@ export class SSHBackendProvider implements BackendBaseClass {
       destPort,
       protocol,
     );
+
     if (!connectionCheck.success) throw new Error(connectionCheck.message);
 
     const foundProxyEntry = this.proxies.find(
@@ -141,6 +147,7 @@ export class SSHBackendProvider implements BackendBaseClass {
         i.sourcePort == sourcePort &&
         i.destPort == destPort,
     );
+
     if (foundProxyEntry) return;
 
     (async () => {
@@ -154,6 +161,7 @@ export class SSHBackendProvider implements BackendBaseClass {
               i.sourcePort == sourcePort &&
               i.destPort == destPort,
           );
+
           if (!foundProxyEntry || !foundProxyEntry.enabled) return reject();
 
           const client: ConnectedClient = {
@@ -217,6 +225,7 @@ export class SSHBackendProvider implements BackendBaseClass {
       destPort,
       protocol,
     );
+
     if (!connectionCheck.success) throw new Error(connectionCheck.message);
 
     const foundProxyEntry = this.proxies.find(
@@ -225,6 +234,7 @@ export class SSHBackendProvider implements BackendBaseClass {
         i.sourcePort == sourcePort &&
         i.destPort == destPort,
     );
+
     if (!foundProxyEntry) return;
 
     foundProxyEntry.enabled = false;
@@ -240,12 +250,13 @@ export class SSHBackendProvider implements BackendBaseClass {
     destPort: number,
     protocol: "tcp" | "udp",
   ): ParameterReturnedValue {
-    if (protocol == "udp")
+    if (protocol == "udp") {
       return {
         success: false,
         message:
           "SSH does not support UDP tunneling! Please use something like PortCopier instead (if it gets done)",
       };
+    }
 
     return {
       success: true,
