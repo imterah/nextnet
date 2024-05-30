@@ -103,6 +103,29 @@ export class SSHBackendProvider implements BackendBaseClass {
       return false;
     }
 
+    if (this.sshInstance.connection) {
+      this.sshInstance.connection.on("end", async() => {
+        if (this.state != "started") return;
+        this.logs.push("We disconnected from the SSH server. Restarting...");
+
+        // Create a new array from the existing list of proxies, so we have a backup of the proxy list before
+        // we wipe the list of all proxies and clients (as we're disconnected anyways)
+        const proxies = Array.from(this.proxies);
+
+        this.proxies.splice(0, this.proxies.length);
+        this.clients.splice(0, this.clients.length);
+
+        await this.start();
+
+        if (this.state != "started") return;
+
+        for (const proxy of proxies) {
+          if (!proxy.enabled) continue;
+          this.addConnection(proxy.sourceIP, proxy.sourcePort, proxy.destPort, "tcp");
+        }
+      });
+    };
+
     this.state = "started";
     this.logs.push("Successfully started SSHBackendProvider.");
 
