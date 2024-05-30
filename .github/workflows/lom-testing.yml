@@ -3,10 +3,10 @@ name: CI Testing (LOM)
 on:
   pull_request:
     paths:
-      - "api/**"
+      - "lom/**"
   push:
     paths:
-      - "api/**"
+      - "lom/**"
 
 defaults:
   run:
