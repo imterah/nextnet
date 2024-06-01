@@ -1,25 +1,29 @@
 services:
-  nextnet-api:
+  api:
     image: ghcr.io/greysoh/nextnet:latest
     container_name: nextnet-api
     restart: always
     env_file:
       - .env
+    depends_on:
+      - db
     ports:
       - 3000:3000
 
   # NOTE: For this to work correctly, the nextnet-api must be version > 0.1.1
   # or have a version with backported username support, incl. logins
-  nextnet-lom:
+  lom:
     image: ghcr.io/greysoh/nextnet-lom:latest
     container_name: nextnet-lom
     restart: always
     ports:
       - 2222:2222
+    depends_on:
+      - api
     volumes:
       - ssh_key_data:/app/keys
 
-  postgres:
+  db:
     image: postgres:15.4
     container_name: nextnet-postgres
     restart: unless-stopped
