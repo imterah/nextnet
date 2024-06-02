@@ -2,16 +2,17 @@
 shopt -s globstar
 set -e
 
-pushd $(git rev-parse --show-toplevel)/api
+ROOT="$(git rev-parse --show-toplevel)"
+
+pushd $ROOT/api
 npx eslint src
 popd
 
-pushd $(git rev-parse --show-toplevel)/lom
+pushd $ROOT/lom
 npx eslint src
 popd
 
 # Formatting step
-"$(git rev-parse --show-toplevel)"/api/node_modules/.bin/prettier --ignore-unknown --write $(git rev-parse --show-toplevel)/{api,lom}/{eslint.config.js,src/**/*.ts}
-rustfmt $(git rev-parse --show-toplevel)/gui/src/**/*.rs
+$ROOT/api/node_modules/.bin/prettier --ignore-unknown --write $ROOT/{api,lom}/{eslint.config.js,src/**/*.ts}
 git update-index --again
 exit 0
