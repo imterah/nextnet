@@ -92,9 +92,18 @@ const createdBackends = await prisma.desinationProvider.findMany();
 const logWrapper = (arg: string) => fastify.log.info(arg);
 const errorWrapper = (arg: string) => fastify.log.error(arg);
 
-for (const backend of createdBackends) {  
-  fastify.log.info(`Running init steps for ID '${backend.id}' (${backend.name})`);
-  const init = await backendInit(backend, backends, prisma, logWrapper, errorWrapper);
+for (const backend of createdBackends) {
+  fastify.log.info(
+    `Running init steps for ID '${backend.id}' (${backend.name})`,
+  );
+
+  const init = await backendInit(
+    backend,
+    backends,
+    prisma,
+    logWrapper,
+    errorWrapper,
+  );
 
   if (init) fastify.log.info("Init successful.");
 }

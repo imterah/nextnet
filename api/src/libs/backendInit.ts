@@ -18,10 +18,13 @@ export async function backendInit(
   backends: Record<number, BackendBaseClass>,
   prisma: PrismaClient,
   logger?: (arg: string) => void,
-  errorOut?: (arg: string) => void
+  errorOut?: (arg: string) => void,
 ): Promise<boolean> {
-  const log = (...args: any[]) => logger ? logger(format(...args)) : console.log(...args);
-  const error = (...args: any[]) => errorOut ? errorOut(format(...args)) : log(...args);
+  const log = (...args: string[]) =>
+    logger ? logger(format(...args)) : console.log(...args);
+
+  const error = (...args: string[]) =>
+    errorOut ? errorOut(format(...args)) : log(...args);
 
   const ourProvider = backendProviders[backend.backend];
 

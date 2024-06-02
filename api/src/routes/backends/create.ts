@@ -83,7 +83,13 @@ export function route(routeOptions: RouteOptions) {
         },
       });
 
-      const init = await backendInit(backend, backends, prisma, logWrapper, errorWrapper);
+      const init = await backendInit(
+        backend,
+        backends,
+        prisma,
+        logWrapper,
+        errorWrapper,
+      );
 
       if (!init) {
         // TODO: better error code
