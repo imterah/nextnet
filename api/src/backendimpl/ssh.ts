@@ -104,7 +104,7 @@ export class SSHBackendProvider implements BackendBaseClass {
     }
 
     if (this.sshInstance.connection) {
-      this.sshInstance.connection.on("end", async() => {
+      this.sshInstance.connection.on("end", async () => {
         if (this.state != "started") return;
         this.logs.push("We disconnected from the SSH server. Restarting...");
 
@@ -121,10 +121,15 @@ export class SSHBackendProvider implements BackendBaseClass {
 
         for (const proxy of proxies) {
           if (!proxy.enabled) continue;
-          this.addConnection(proxy.sourceIP, proxy.sourcePort, proxy.destPort, "tcp");
+          this.addConnection(
+            proxy.sourceIP,
+            proxy.sourcePort,
+            proxy.destPort,
+            "tcp",
+          );
         }
       });
-    };
+    }
 
     this.state = "started";
     this.logs.push("Successfully started SSHBackendProvider.");

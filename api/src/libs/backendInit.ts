@@ -1,3 +1,5 @@
+import { format } from "node:util";
+
 import type { PrismaClient } from "@prisma/client";
 
 import type { BackendBaseClass } from "../backendimpl/base.js";
@@ -15,27 +17,32 @@ export async function backendInit(
   backend: Backend,
   backends: Record<number, BackendBaseClass>,
   prisma: PrismaClient,
+  logger?: (arg: string) => void,
+  errorOut?: (arg: string) => void
 ): Promise<boolean> {
+  const log = (...args: any[]) => logger ? logger(format(...args)) : console.log(...args);
+  const error = (...args: any[]) => errorOut ? errorOut(format(...args)) : log(...args);
+
   const ourProvider = backendProviders[backend.backend];
 
   if (!ourProvider) {
-    console.log(" - Error: Invalid backend recieved!");
+    error(" - Error: Invalid backend recieved!");
     return false;
   }
 
-  console.log(" - Initializing backend...");
+  log(" - Initializing backend...");
 
   backends[backend.id] = new ourProvider(backend.connectionDetails);
   const ourBackend = backends[backend.id];
 
   if (!(await ourBackend.start())) {
-    console.log(" - Error initializing backend!");
-    console.log("   - " + ourBackend.logs.join("\n   - "));
+    error(" - Error initializing backend!");
+    error("   - " + ourBackend.logs.join("\n   - "));
 
     return false;
   }
 
-  console.log(" - Initializing clients...");
+  log(" - Initializing clients...");
 
   const clients = await prisma.forwardRule.findMany({
     where: {
@@ -46,7 +53,7 @@ export async function backendInit(
 
   for (const client of clients) {
     if (client.protocol != "tcp" && client.protocol != "udp") {
-      console.error(
+      error(
         ` - Error: Client with ID of '${client.id}' has an invalid protocol! (must be either TCP or UDP)`,
       );
       continue;

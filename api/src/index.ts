@@ -85,18 +85,21 @@ const routeOptions: RouteOptions = {
   backends: backends,
 };
 
-console.log("Initializing forwarding rules...");
+fastify.log.info("Initializing forwarding rules...");
 
 const createdBackends = await prisma.desinationProvider.findMany();
 
-for (const backend of createdBackends) {
-  console.log(`Running init steps for ID '${backend.id}' (${backend.name})`);
-  const init = await backendInit(backend, backends, prisma);
+const logWrapper = (arg: string) => fastify.log.info(arg);
+const errorWrapper = (arg: string) => fastify.log.error(arg);
 
-  if (init) console.log("Init successful.");
+for (const backend of createdBackends) {  
+  fastify.log.info(`Running init steps for ID '${backend.id}' (${backend.name})`);
+  const init = await backendInit(backend, backends, prisma, logWrapper, errorWrapper);
+
+  if (init) fastify.log.info("Init successful.");
 }
 
-console.log("Done.");
+fastify.log.info("Done.");
 
 getPermissions(routeOptions);
 

@@ -19,6 +19,7 @@ export type ClientKeys = {
 function checkValue(input: Buffer, allowed: Buffer): boolean {
   const autoReject = input.length !== allowed.length;
   if (autoReject) allowed = input;
+
   const isMatch = timingSafeEqual(input, allowed);
   return !autoReject && isMatch;
 }
@@ -69,9 +70,7 @@ const server: ssh2.Server = new ssh2.Server({
 server.on("connection", client => {
   let token: string = "";
 
-  // eslint-disable-next-line
   let username: string = "";
-  // eslint-disable-next-line
   let password: string = "";
 
   client.on("authentication", async auth => {
@@ -105,8 +104,6 @@ server.on("connection", client => {
           continue;
         }
 
-        console.log(auth.signature, auth.blob);
-
         if (
           (rawKey.username == auth.username &&
             auth.key.algo == key.type &&
@@ -114,7 +111,6 @@ server.on("connection", client => {
           (auth.signature &&
             key.verify(auth.blob as Buffer, auth.signature, auth.key.algo))
         ) {
-          console.log(" -- VERIFIED PUBLIC KEY --");
           userData.username = rawKey.username;
           userData.password = rawKey.password;
         }

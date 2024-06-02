@@ -7,6 +7,9 @@ import { backendInit } from "../../libs/backendInit.js";
 export function route(routeOptions: RouteOptions) {
   const { fastify, prisma, tokens, backends } = routeOptions;
 
+  const logWrapper = (arg: string) => fastify.log.info(arg);
+  const errorWrapper = (arg: string) => fastify.log.error(arg);
+
   function hasPermission(
     token: string,
     permissionList: string[],
@@ -80,7 +83,7 @@ export function route(routeOptions: RouteOptions) {
         },
       });
 
-      const init = await backendInit(backend, backends, prisma);
+      const init = await backendInit(backend, backends, prisma, logWrapper, errorWrapper);
 
       if (!init) {
         // TODO: better error code
