@@ -33,10 +33,10 @@ import { backendInit } from "./libs/backendInit.js";
 
 const prisma = new PrismaClient();
 
-const isSignupEnabled: boolean = Boolean(process.env.IS_SIGNUP_ENABLED);
-const unsafeAdminSignup: boolean = Boolean(process.env.UNSAFE_ADMIN_SIGNUP);
+const isSignupEnabled = Boolean(process.env.IS_SIGNUP_ENABLED);
+const unsafeAdminSignup = Boolean(process.env.UNSAFE_ADMIN_SIGNUP);
 
-const noUsersCheck: boolean = (await prisma.user.count()) == 0;
+const noUsersCheck = (await prisma.user.count()) == 0;
 
 if (unsafeAdminSignup) {
   console.error(
