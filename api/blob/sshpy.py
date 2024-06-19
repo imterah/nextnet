@@ -1,7 +1,9 @@
+from typing import List, Callable
+from dataclasses import dataclass
 from enum import Enum
 
-from typing import List
 import socketserver
+import threading
 import signal
 import sys
 
@@ -57,7 +59,7 @@ def make_ip_section(ip: str) -> bytearray:
 
 def parse_ip_section(ip_block: bytearray) -> str:
   if ip_block[0] == 4:
-    return ".".join(str(int.from_bytes(ip_block[i:i+1])) for i in range(1, 5))
+    return ".".join(str(int.from_bytes(ip_block[i:i+1], "big")) for i in range(1, 5))
   elif ip_block[1] == 6:
     address = ""
 
@@ -87,8 +89,7 @@ def convert_int32_to_arr(num: int) -> List[int]:
 
 class RequestTypes(Enum):
   # Only on the server
-  STATUS = 0
-  TCP_INITIATE_CONNECTION = 3
+  TCP_INITIATE_CONNECTION = 5
 
   # Only on the client
   TCP_INITIATE_FORWARD_RULE = 1
@@ -97,9 +98,12 @@ class RequestTypes(Enum):
   UDP_CLOSE_FORWARD_RULE = 4
 
   # On client & server
-  TCP_CLOSE_CONNECTION = 4
-  TCP_MESSAGE = 5
-  UDP_MESSAGE = 6
+  STATUS = 0
+  
+  TCP_CLOSE_CONNECTION = 6
+  TCP_MESSAGE = 7
+  UDP_MESSAGE = 8
+  NOP = 255
 
 class StatusTypes(Enum):
   SUCCESS = 0
@@ -108,23 +112,153 @@ class StatusTypes(Enum):
   MISSING_PARAMETERS = 3
   ALREADY_LISTENING  = 4
 
+@dataclass
+class TCPWrappedSocket:
+  source_ip: str
+  source_port: int
+  dest_port: int
+  has_initialized: bool
+
+  socket: socketserver.BaseRequestHandler
+
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
   pass
 
 class RequestHandler(socketserver.BaseRequestHandler):
-  message_queue = []
-  
-  def handle(self):    
-    while True:
-      for message in self.message_queue:
-        self.request.sendall(message)
+  tcp_sockets: dict[int, TCPWrappedSocket] = {}
+  tcp_current_client_id: int = 0
+
+  def on_tcp_callback(self, sock_server: socketserver.BaseRequestHandler):
+    client_id = self.tcp_current_client_id
+    client_id_calc_wraparounds = 0
+
+    if client_id > 65535:
+      client_id = 0
+
+    # Should never occur unless clients reach 65535, and then overflow 
+    while client_id in self.tcp_sockets:
+      if client_id + 1 > 65535:
+        client_id = 0
+        client_id_calc_wraparounds += 1
     
+      if client_id_calc_wraparounds > 1:
+        raise Exception("Reached protocol limit of allowed clients at once")
+        
+      client_id += 1
+    
+    self.tcp_current_client_id = client_id + 1
+
+    client_ip, client_port = sock_server.client_address
+    server_ip, server_port = sock_server.request.getsockname()
+
+    client_wrapped_ip = make_ip_section(client_ip)
+    client_wrapped_port = convert_int32_to_arr(client_port)
+    server_wrapped_port = convert_int32_to_arr(server_port)
+
+    wrapped_client_id = convert_int32_to_arr(client_id)
+
+    tcp_socket = TCPWrappedSocket(client_ip, client_port, server_port, False, sock_server)
+    self.tcp_sockets[client_id] = tcp_socket
+
+    connection_packet = [RequestTypes.TCP_INITIATE_CONNECTION.value] + list(client_wrapped_ip) + client_wrapped_port + server_wrapped_port + wrapped_client_id
+    self.request.sendall(bytes(connection_packet))
+
+    while True:
+      try:
+        if tcp_socket.has_initialized:
+          data = sock_server.request.recv(4096)
+          encoded_length = convert_int32_to_arr(len(data))
+
+          self.request.sendall(bytes([RequestTypes.TCP_MESSAGE.value] + wrapped_client_id + encoded_length) + data)
+      except (ConnectionResetError, BrokenPipeError):
+        self.request.sendall(bytes([]))
+        return
+
+  def handle(self):
+    while True:
       original_identifier = self.request.recv(1)
 
-      match original_identifier:
-        case _:
-          self.request.sendall([RequestTypes.STATUS, StatusTypes.UNKNOWN_MESSAGE])
-          pass
+      if original_identifier[0] == RequestTypes.TCP_INITIATE_FORWARD_RULE.value:
+        port_raw_byte = self.request.recv(4)
+        port = convert_to_int32(port_raw_byte)
+
+        tcp_class = generate_tcp_forward_rule_class(self.on_tcp_callback)
+
+        try:
+          server = ThreadedTCPServer(("0.0.0.0", port), tcp_class)
+        except OSError:
+          print(f"warn: Failed to listen on ::{port}")
+          self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.GENERAL_FAILURE.value, 0xFF]))
+          continue
+
+        print(f"info: Started listening on ::{port}")
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+
+        self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
+      elif original_identifier[0] == RequestTypes.UDP_INITIATE_FORWARD_RULE.value:
+        pass
+      elif original_identifier[0] == RequestTypes.TCP_MESSAGE.value:
+        client_id = convert_to_int32(self.request.recv(4))
+        packet_len = convert_to_int32(self.request.recv(4))
+        packet = self.request.recv(packet_len)
+
+        if not client_id in self.tcp_sockets:
+          continue
+
+        self.tcp_sockets[client_id].socket.request.sendall(packet)
+      elif original_identifier[0] == RequestTypes.UDP_MESSAGE.value:
+        ip_ver = self.request.recv(1)
+
+        if ip_ver[0] == 4:
+          ip_segment = self.request.recv(4)
+        elif ip_ver[0] == 6:
+          ip_segment = self.request.recv(16)
+        
+        ip_section = ip_ver + ip_segment
+        ip = parse_ip_section(ip_section)
+
+        port = convert_to_int32(self.request.recv(4))
+      elif original_identifier[0] == RequestTypes.NOP.value:
+        pass
+      elif original_identifier[0] == RequestTypes.STATUS.value:
+        status_code = self.request.recv(1)
+        identifier = self.request.recv(1)
+
+        if status_code[0] != StatusTypes.SUCCESS.value:
+          print(f"Recieved unsuccessful status code: {status_code[0]}")
+          
+          if identifier[0] != RequestTypes.NOP.value:
+            print(f"In request type: {identifier[0]}")
+        
+        if identifier[0] == RequestTypes.TCP_INITIATE_CONNECTION.value:
+          ip_type = self.request.recv(1)
+
+          # Read until we get the client ID
+          if ip_type[0] == 4:
+            self.request.recv(4)
+          elif ip_type[0] == 6:
+            self.request.recv(16)
+
+          self.request.recv(8)
+
+          client_id = convert_to_int32(self.request.recv(4))
+
+          if status_code[0] == StatusTypes.SUCCESS.value and client_id in self.tcp_sockets:
+            self.tcp_sockets[client_id].has_initialized = True
+      else:
+        self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.UNKNOWN_MESSAGE.value]) + original_identifier)
+
+def generate_tcp_forward_rule_class(on_conn_callback: Callable[[socketserver.BaseRequestHandler], any]) -> socketserver.BaseRequestHandler:
+  class TCPForwardServer(socketserver.BaseRequestHandler):
+    def __init__(self, request, client_address, server):
+      self.callback = on_conn_callback
+      super().__init__(request, client_address, server)
+    
+    def handle(self):
+      self.callback(self)
+  
+  return TCPForwardServer
 
 def main():
   print("Initializing...")

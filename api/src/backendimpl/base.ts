@@ -20,13 +20,10 @@ export type ConnectedClient = {
 
 export class BackendBaseClass {
   state: "stopped" | "stopping" | "started" | "starting";
-
-  clients?: ConnectedClient[]; // Not required to be implemented, but more consistency
   logs: string[];
 
   constructor(parameters: string) {
     this.logs = [];
-    this.clients = [];
 
     this.state = "stopped";
   }
@@ -53,8 +50,7 @@ export class BackendBaseClass {
   }
 
   getAllConnections(): ConnectedClient[] {
-    if (this.clients == null) return [];
-    return this.clients;
+    return [];
   }
 
   static checkParametersConnection(

@@ -122,7 +122,6 @@ function convertInt32ToArr(num: number): Uint8Array {
 
 enum RequestTypes {
   // Only on the server
-  STATUS = 0,
   TCP_INITIATE_CONNECTION = 5,
 
   // Only on the client
@@ -132,9 +131,12 @@ enum RequestTypes {
   UDP_CLOSE_FORWARD_RULE = 4,
 
   // On client & server
+  STATUS = 0,
+  
   TCP_CLOSE_CONNECTION = 6,
   TCP_MESSAGE = 7,
   UDP_MESSAGE = 8,
+  NOP = 255
 };
 
 enum StatusTypes {
@@ -158,7 +160,7 @@ type BackendProvider = {
 
 type TCPForwardRule = {
   protocol: "tcp";
-  clients: Socket[];
+  clients: Record<number, Socket>;
 }
 
 type UDPForwardRule = {
@@ -167,6 +169,14 @@ type UDPForwardRule = {
 }
 
 type ForwardRuleExt = ForwardRule & (TCPForwardRule | UDPForwardRule);
+
+type ConnectedClientExt = {
+  ip: string;
+  port: number;
+
+  connectionDetails: ForwardRuleExt;
+  sock?: Socket;
+};
 
 function parseBackendProviderString(data: string): BackendProvider {
   try {
@@ -220,7 +230,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
   // Proxies awaiting initialization on the server. These automatically get fully initialized in handleProtocol
   queuedProxies: ForwardRuleExt[];
 
-  clients: ConnectedClient[];
+  clients: Record<number, ConnectedClientExt>;
   proxies: ForwardRuleExt[];
   logs: string[];
 
@@ -231,7 +241,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
   constructor(parameters: string) {
     this.logs = [];
     this.proxies = [];
-    this.clients = [];
+    this.clients = {};
 
     this.queuedProxies = [];
 
@@ -249,7 +259,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     }
   }
 
-  private async readBytes(size: number) {
+  private async readBytes(size: number): Promise<Buffer> {
     let data = this.connection.read(size);
 
     while (data == null) {
@@ -262,7 +272,139 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
   async handleProtocol() {
     while (true) {
-      const data = await this.readBytes(1);
+      const messageType: number = (await this.readBytes(1))[0];
+      
+      switch (messageType) {
+        default: {
+          this.connection.write(new Uint8Array([
+            RequestTypes.STATUS,
+            StatusTypes.UNKNOWN_MESSAGE,
+            messageType
+          ]));
+
+          break;
+        }
+
+        case RequestTypes.STATUS: {
+          const statusType: number = (await this.readBytes(1))[0];
+          const inResponseTo: number = (await this.readBytes(1))[0];
+
+          if (statusType != StatusTypes.SUCCESS) {
+            const statusName = StatusTypes[statusType];
+            const responseName = RequestTypes[inResponseTo];
+
+            this.logs.push("ERROR: Recieved an error code from the server: " + statusName);
+
+            if (responseName != "NOP") {
+              this.logs.push("Failed in: " + responseName);
+            }
+
+            break;
+          }
+
+          if (inResponseTo == RequestTypes.TCP_INITIATE_FORWARD_RULE) {
+            const portRaw = await this.readBytes(4);
+            const port = convertToInt32(portRaw);
+
+            const foundProxy = this.queuedProxies.find((i) => i.destPort == port);
+            
+            if (!foundProxy) {
+              this.logs.push("WARN: Got TCP proxy initation reply, but proxy could not be found");
+              break;
+            }
+            
+            this.queuedProxies.splice(this.queuedProxies.indexOf(foundProxy), 1);
+            this.proxies.push(foundProxy);
+          }
+          
+          break;
+        }
+
+        case RequestTypes.TCP_INITIATE_CONNECTION: {
+          const ipSectionType = await this.readBytes(1);
+          let ipSectionData: Buffer;
+
+          if (ipSectionType[0] == 4) {
+            ipSectionData = await this.readBytes(4);
+          } else if (ipSectionType[1] == 6) {
+            ipSectionData = await this.readBytes(16);
+          } else {
+            break;
+          }
+
+          const ipSection = new Uint8Array(ipSectionData.length + 1);
+          ipSection.set(ipSectionType, 0);
+          ipSection.set(ipSectionData, 1);
+
+          const ip = parseIPSection(ipSection);
+          
+          const clientPort = convertToInt32(await this.readBytes(4));
+          const destPort = convertToInt32(await this.readBytes(4));
+          const clientID = convertToInt32(await this.readBytes(4));
+
+          const foundServer = this.proxies.find((i) => i.destPort == destPort);
+
+          if (!foundServer) {
+            break;
+          }
+
+          if (foundServer.clients instanceof VirtualPorts) {
+            break;
+          }
+
+          const sock = new Socket();
+          foundServer.clients[clientID] = sock;
+
+          this.clients[clientID] = {
+            ip,
+            port: clientPort,
+
+            connectionDetails: foundServer,
+            sock
+          };
+
+          sock.on("data", (data) => {
+            const tcpMessagePacket = new Uint8Array(data.length + 9);
+            
+            tcpMessagePacket[0] = RequestTypes.TCP_MESSAGE;
+            tcpMessagePacket.set(convertInt32ToArr(clientID), 1);
+            tcpMessagePacket.set(convertInt32ToArr(data.length), 5);
+            tcpMessagePacket.set(data, 9);
+
+            this.connection.write(tcpMessagePacket);
+          });
+
+          sock.connect(foundServer.sourcePort, foundServer.sourceIP);
+
+          const statusMessage = new Uint8Array(ipSection.length + (4 * 3) + 3);
+          statusMessage[0] = RequestTypes.STATUS;
+          statusMessage[1] = StatusTypes.SUCCESS;
+          statusMessage[2] = RequestTypes.TCP_INITIATE_CONNECTION;
+             
+          statusMessage.set(ipSection, 3);
+          statusMessage.set(new Uint8Array(convertInt32ToArr(clientPort)), 3 + ipSection.length + 0);
+          statusMessage.set(new Uint8Array(convertInt32ToArr(destPort)), 3 + ipSection.length + 4);
+          statusMessage.set(new Uint8Array(convertInt32ToArr(clientID)), 3 + ipSection.length + 8);
+
+          this.connection.write(statusMessage);
+          break;
+        }
+
+        case RequestTypes.TCP_MESSAGE: {
+          const clientID = convertToInt32(await this.readBytes(4));
+          const packetLen = convertToInt32(await this.readBytes(4));
+          const packet = await this.readBytes(packetLen);
+          
+          const client = this.clients[clientID];
+          
+          if (!client || !client.sock) {
+            break;
+          }
+
+          client.sock.write(packet);
+          break;
+        }
+      }
     }
   }
 
@@ -328,29 +470,31 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
     // Stop & delete existing sshpy instances
     await this.sshInstance.exec("pkill", ["-SIGINT", "-f", `${pythonRuntime} /tmp/sshpy.py`]);
-    
-    const serverKillPort = await this.sshInstance.exec("lsof", ["-t", `-i:${port}`]);
-    
-    if (serverKillPort) {
-      await this.sshInstance.exec("kill", ["-9", serverKillPort]);
-    }
 
-    await this.sshInstance.exec("rm", ["-rf", "/tmp/sshpy.py"]);
-    await this.sshInstance.putFile(sshpyPath, "/tmp/sshpy.py");
+    if (process.env.NODE_ENV != "production" && !process.env.SSHPY_BYPASS_AUTOMATIC_SERVER_SETUP) {
+      const serverKillPort = await this.sshInstance.exec("lsof", ["-t", `-i:${port}`]);
     
-    // This is an asynchronous function, but there isn't really a good way to wait until an
-    // the server starts, so we just sleep instead, and check if the port is alive.
-
-    try {
-      this.sshInstance.exec(pythonRuntime, ["-u", "/tmp/sshpy.py", `${port}`], {
-        onStdout: this.onStdout.bind(this),
-        onStderr: this.onStdout.bind(this)
-      });
-    } catch (e) {
-      this.state = "stopped";
-      this.logs.push("Server (sshpy) failed to start.");
-
-      return false;
+      if (serverKillPort) {
+        await this.sshInstance.exec("kill", ["-9", serverKillPort]);
+      }
+  
+      await this.sshInstance.exec("rm", ["-rf", "/tmp/sshpy.py"]);
+      await this.sshInstance.putFile(sshpyPath, "/tmp/sshpy.py");
+      
+      // This is an asynchronous function, but there isn't really a good way to wait until an
+      // the server starts, so we just sleep instead, and check if the port is alive.
+  
+      try {
+        this.sshInstance.exec(pythonRuntime, ["-u", "/tmp/sshpy.py", `${port}`], {
+          onStdout: this.onStdout.bind(this),
+          onStderr: this.onStdout.bind(this)
+        });
+      } catch (e) {
+        this.state = "stopped";
+        this.logs.push("Server (sshpy) failed to start.");
+  
+        return false;
+      }
     }
 
     await new Promise((res) => setTimeout(res, 1000));
@@ -366,6 +510,8 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
     // Connect to the server running on the remote machine
     this.connection = await this.sshInstance.forwardOut("127.0.0.1", 4096, "127.0.0.1", port);
+    await new Promise((res) => setTimeout(res, 100));
+    
     this.handleProtocol();
     
     this.state = "started";
@@ -380,7 +526,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
     this.queuedProxies.splice(0, this.queuedProxies.length);
     this.proxies.splice(0, this.proxies.length);
-    this.clients.splice(0, this.clients.length);
+    this.clients = {};
 
     this.sshInstance.dispose();
 
@@ -414,13 +560,11 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     this.queuedProxies.push(proxy);
 
     const reqProtocol = protocol == "tcp" ? RequestTypes.TCP_INITIATE_FORWARD_RULE : RequestTypes.UDP_INITIATE_FORWARD_RULE;
-    const reqIPSection = makeIPSection(sourceIP);
     const reqDestPort = convertInt32ToArr(destPort);
 
-    const connAddRequest = new Uint8Array(1 + reqIPSection.length + reqDestPort.length);
+    const connAddRequest = new Uint8Array(5);
     connAddRequest[0] = reqProtocol;
-    connAddRequest.set(reqIPSection, 1);
-    connAddRequest.set(reqDestPort, reqIPSection.length + 1);
+    connAddRequest.set(reqDestPort, 1);
 
     this.connection.write(connAddRequest);
   }
@@ -458,7 +602,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
   }
 
   getAllConnections(): ConnectedClient[] {
-    return this.clients;
+    return Object.keys(this.clients).map((i) => this.clients[parseInt(i)]);
   }
 
   static checkParametersConnection(): ParameterReturnedValue {
