@@ -249,7 +249,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     }
   }
 
-  private async readBytes(size: number): Promise<any> {
+  private async readBytes(size: number) {
     let data = this.connection.read(size);
 
     while (data == null) {
