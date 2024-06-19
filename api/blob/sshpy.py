@@ -167,11 +167,14 @@ class RequestHandler(socketserver.BaseRequestHandler):
       try:
         if tcp_socket.has_initialized:
           data = sock_server.request.recv(4096)
-          encoded_length = convert_int32_to_arr(len(data))
 
+          if len(data) == 0:
+            continue
+
+          encoded_length = convert_int32_to_arr(len(data))
           self.request.sendall(bytes([RequestTypes.TCP_MESSAGE.value] + wrapped_client_id + encoded_length) + data)
-      except (ConnectionResetError, BrokenPipeError):
-        self.request.sendall(bytes([]))
+      except (ConnectionResetError, BrokenPipeError, OSError):
+        self.request.sendall(bytes([RequestTypes.TCP_CLOSE_CONNECTION.value] + wrapped_client_id))
         return
 
   def handle(self):
@@ -193,6 +196,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         print(f"info: Started listening on ::{port}")
         thread = threading.Thread(target=server.serve_forever)
+        thread.daemon = True
         thread.start()
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
@@ -219,6 +223,13 @@ class RequestHandler(socketserver.BaseRequestHandler):
         ip = parse_ip_section(ip_section)
 
         port = convert_to_int32(self.request.recv(4))
+      elif original_identifier[0] == RequestTypes.TCP_CLOSE_CONNECTION.value:
+        client_id = convert_to_int32(self.request.recv(4))
+
+        if not client_id in self.tcp_sockets:
+          continue
+
+        self.tcp_sockets[client_id].socket.request.close()
       elif original_identifier[0] == RequestTypes.NOP.value:
         pass
       elif original_identifier[0] == RequestTypes.STATUS.value:

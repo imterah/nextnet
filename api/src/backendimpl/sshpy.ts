@@ -374,6 +374,38 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             this.connection.write(tcpMessagePacket);
           });
 
+          sock.on("close", () => {
+            delete this.clients[clientID];
+
+            if (!(foundServer.clients instanceof VirtualPorts)) {
+              delete foundServer.clients[clientID];
+            }
+            
+            this.connection.write(new Uint8Array([
+              RequestTypes.TCP_CLOSE_CONNECTION,
+              ...convertInt32ToArr(clientID)
+            ]));
+          });
+
+          sock.on("error", () => {
+            try {
+              sock.end();
+            } catch (e) {
+              //
+            };
+
+            delete this.clients[clientID];
+            
+            if (!(foundServer.clients instanceof VirtualPorts)) {
+              delete foundServer.clients[clientID];
+            }
+            
+            this.connection.write(new Uint8Array([
+              RequestTypes.TCP_CLOSE_CONNECTION,
+              ...convertInt32ToArr(clientID)
+            ]));
+          });
+
           sock.connect(foundServer.sourcePort, foundServer.sourceIP);
 
           const statusMessage = new Uint8Array(ipSection.length + (4 * 3) + 3);
@@ -403,6 +435,25 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
           client.sock.write(packet);
           break;
+        }
+
+        case RequestTypes.TCP_CLOSE_CONNECTION: {
+          const clientID = convertToInt32(await this.readBytes(4));
+          const client = this.clients[clientID];
+
+          const foundServer = this.proxies.find((i) => !(i.clients instanceof VirtualPorts) ? i.clients[clientID] : false);
+
+          if (!client || !client.sock || !foundServer) {
+            break;
+          }
+
+          client.sock.end();
+          
+          delete this.clients[clientID];
+            
+          if (!(foundServer.clients instanceof VirtualPorts)) {
+            delete foundServer.clients[clientID];
+          }
         }
       }
     }
