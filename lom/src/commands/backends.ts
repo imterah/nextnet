@@ -18,6 +18,7 @@ type BackendLookupSuccess = {
 
 const addRequiredOptions = {
   ssh: ["sshKey", "username", "host"],
+  sshpy: ["sshKey", "username", "host"],
 
   passyfire: ["host"],
 };
@@ -61,17 +62,17 @@ export async function run(
   // SSH provider
   addBackend.option(
     "-k, --ssh-key <private-key>",
-    "(SSH) SSH private key to use to authenticate with the server",
+    "(SSH, SSHpy) SSH private key to use to authenticate with the server",
   );
 
   addBackend.option(
     "-u, --username <user>",
-    "(SSH, PassyFire) Username to authenticate with. With PassyFire, it's the username you create",
+    "(SSH, SSHpy, PassyFire) Username to authenticate with. With PassyFire, it's the username you create",
   );
 
   addBackend.option(
     "-h, --host <host>",
-    "(SSH, PassyFire) Host to connect to. With PassyFire, it's what you listen on",
+    "(SSH, SSHpy, PassyFire) Host to connect to. With PassyFire, it's what you listen on",
   );
 
   // PassyFire provider
@@ -171,6 +172,45 @@ export async function run(
           "\\n",
           "\n",
         );
+
+        connectionDetails = JSON.stringify(unstringifiedArguments);
+      } else if (provider == "sshpy") {
+        // TODO add full functionality
+        for (const argument of addRequiredOptions["ssh"]) {
+          // @ts-expect-error: No.
+          const hasArgument = options[argument];
+
+          if (!hasArgument) {
+            return println("ERROR: Missing argument '%s'\n", argument);
+          }
+        }
+
+        const unstringifiedArguments: {
+          ip?: string;
+          port?: number;
+          username?: string;
+          privateKey?: string;
+        } = {};
+
+        if (options.host) {
+          const sourceSplit: string[] = options.host.split(":");
+
+          const sourceIP: string = sourceSplit[0];
+          const sourcePort: number =
+            sourceSplit.length >= 2 ? parseInt(sourceSplit[1]) : 22;
+
+          unstringifiedArguments.ip = sourceIP;
+          unstringifiedArguments.port = sourcePort;
+        }
+
+        unstringifiedArguments.username = options.username;
+        
+        unstringifiedArguments.privateKey = options.sshKey?.replaceAll(
+          "\\n",
+          "\n",
+        );
+
+        console.log(unstringifiedArguments.privateKey?.indexOf("\n"));
 
         connectionDetails = JSON.stringify(unstringifiedArguments);
       } else if (provider == "passyfire") {
