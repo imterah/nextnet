@@ -128,6 +128,18 @@ class RequestHandler(socketserver.BaseRequestHandler):
   tcp_sockets: dict[int, TCPWrappedSocket] = {}
   tcp_current_client_id: int = 0
 
+  def read(self, byte_cnt: int) -> bytearray:
+    local_buf: bytearray = bytearray(byte_cnt)
+    current_bytes_read: int = 0
+
+    while current_bytes_read != byte_cnt:
+      data = self.request.recv(byte_cnt - current_bytes_read)
+      
+      local_buf[current_bytes_read:current_bytes_read + len(data)] = data
+      current_bytes_read += len(data)
+
+    return local_buf
+
   def on_tcp_callback(self, sock_server: socketserver.BaseRequestHandler):
     client_id = self.tcp_current_client_id
     client_id_calc_wraparounds = 0
@@ -166,7 +178,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
     while True:
       try:
         if tcp_socket.has_initialized:
-          data = sock_server.request.recv(4096)
+          data = sock_server.request.recv(65535)
 
           if len(data) == 0:
             continue
@@ -175,14 +187,15 @@ class RequestHandler(socketserver.BaseRequestHandler):
           self.request.sendall(bytes([RequestTypes.TCP_MESSAGE.value] + wrapped_client_id + encoded_length) + data)
       except (ConnectionResetError, BrokenPipeError, OSError):
         self.request.sendall(bytes([RequestTypes.TCP_CLOSE_CONNECTION.value] + wrapped_client_id))
+        self.tcp_sockets.pop(client_id, None)
         return
 
   def handle(self):
     while True:
-      original_identifier = self.request.recv(1)
+      original_identifier = self.read(1)
 
       if original_identifier[0] == RequestTypes.TCP_INITIATE_FORWARD_RULE.value:
-        port_raw_byte = self.request.recv(4)
+        port_raw_byte = self.read(4)
         port = convert_to_int32(port_raw_byte)
 
         tcp_class = generate_tcp_forward_rule_class(self.on_tcp_callback)
@@ -203,38 +216,48 @@ class RequestHandler(socketserver.BaseRequestHandler):
       elif original_identifier[0] == RequestTypes.UDP_INITIATE_FORWARD_RULE.value:
         pass
       elif original_identifier[0] == RequestTypes.TCP_MESSAGE.value:
-        client_id = convert_to_int32(self.request.recv(4))
-        packet_len = convert_to_int32(self.request.recv(4))
-        packet = self.request.recv(packet_len)
+        original_client_id = self.read(4)
+        client_id = convert_to_int32(original_client_id)
+        packet_len = convert_to_int32(self.read(4))
+
+        packet = self.read(packet_len)
 
         if not client_id in self.tcp_sockets:
           continue
 
-        self.tcp_sockets[client_id].socket.request.sendall(packet)
+        try:
+          self.tcp_sockets[client_id].socket.request.sendall(packet)
+        except (ConnectionResetError, BrokenPipeError, OSError):
+          self.request.sendall(bytes([RequestTypes.TCP_CLOSE_CONNECTION.value]) + original_client_id)
+          self.tcp_sockets.pop(client_id, None)
       elif original_identifier[0] == RequestTypes.UDP_MESSAGE.value:
-        ip_ver = self.request.recv(1)
+        ip_ver = self.read(1)
+        ip_segment = bytearray()
 
         if ip_ver[0] == 4:
-          ip_segment = self.request.recv(4)
+          ip_segment = self.read(4)
         elif ip_ver[0] == 6:
-          ip_segment = self.request.recv(16)
+          ip_segment = self.read(16)
+        else:
+          print("Invalid IP segment recieved")
         
         ip_section = ip_ver + ip_segment
         ip = parse_ip_section(ip_section)
 
-        port = convert_to_int32(self.request.recv(4))
+        port = convert_to_int32(self.read(4))
       elif original_identifier[0] == RequestTypes.TCP_CLOSE_CONNECTION.value:
-        client_id = convert_to_int32(self.request.recv(4))
+        client_id = convert_to_int32(self.read(4))
 
         if not client_id in self.tcp_sockets:
           continue
 
         self.tcp_sockets[client_id].socket.request.close()
+        self.tcp_sockets.pop(client_id, None)
       elif original_identifier[0] == RequestTypes.NOP.value:
         pass
       elif original_identifier[0] == RequestTypes.STATUS.value:
-        status_code = self.request.recv(1)
-        identifier = self.request.recv(1)
+        status_code = self.read(1)
+        identifier = self.read(1)
 
         if status_code[0] != StatusTypes.SUCCESS.value:
           print(f"Recieved unsuccessful status code: {status_code[0]}")
@@ -243,17 +266,17 @@ class RequestHandler(socketserver.BaseRequestHandler):
             print(f"In request type: {identifier[0]}")
         
         if identifier[0] == RequestTypes.TCP_INITIATE_CONNECTION.value:
-          ip_type = self.request.recv(1)
+          ip_type = self.read(1)
 
           # Read until we get the client ID
           if ip_type[0] == 4:
-            self.request.recv(4)
+            self.read(4)
           elif ip_type[0] == 6:
-            self.request.recv(16)
+            self.read(16)
 
-          self.request.recv(8)
+          self.read(8)
 
-          client_id = convert_to_int32(self.request.recv(4))
+          client_id = convert_to_int32(self.read(4))
 
           if status_code[0] == StatusTypes.SUCCESS.value and client_id in self.tcp_sockets:
             self.tcp_sockets[client_id].has_initialized = True

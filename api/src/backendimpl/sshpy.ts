@@ -230,6 +230,11 @@ export class SSHPyBackendProvider implements BackendBaseClass {
   // Proxies awaiting initialization on the server. These automatically get fully initialized in handleProtocol
   queuedProxies: ForwardRuleExt[];
 
+  // Message buffering
+  messageBuffer: Uint8Array;
+  messageLastIndex: number;
+  messageBufLock: boolean;
+
   clients: Record<number, ConnectedClientExt>;
   proxies: ForwardRuleExt[];
   logs: string[];
@@ -242,6 +247,10 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     this.logs = [];
     this.proxies = [];
     this.clients = {};
+
+    this.messageBuffer = new Uint8Array(1048576 * 4);
+    this.messageLastIndex = 0;
+    this.messageBufLock = false;
 
     this.queuedProxies = [];
 
@@ -259,13 +268,32 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     }
   }
 
-  private async readBytes(size: number): Promise<Buffer> {
-    let data = this.connection.read(size);
+  private async readByteCallback(): Promise<void> {
+    const data: Buffer = this.connection.read();
+    if (data == null) return;
 
-    while (data == null) {
+    while (this.messageBufLock || data.length + this.messageLastIndex > this.messageBuffer.length) {
       await new Promise((i) => setTimeout(i, 1));
-      data = this.connection.read(size);
     }
+
+    this.messageBufLock = true;
+    this.messageBuffer.set(data, this.messageLastIndex);
+    this.messageLastIndex += data.length;
+    this.messageBufLock = false;
+  }
+
+  private async readBytes(size: number): Promise<Uint8Array> {
+    while (this.messageBufLock || this.messageLastIndex < size) {
+      await new Promise((i) => setTimeout(i, 1));
+    }
+
+    this.messageBufLock = true;
+    const data = this.messageBuffer.slice(0, size);
+    
+    this.messageBuffer.set(this.messageBuffer.slice(size, this.messageLastIndex), 0);
+    this.messageLastIndex -= size;
+    
+    this.messageBufLock = false;
 
     return data;
   }
@@ -322,7 +350,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
         case RequestTypes.TCP_INITIATE_CONNECTION: {
           const ipSectionType = await this.readBytes(1);
-          let ipSectionData: Buffer;
+          let ipSectionData: Uint8Array;
 
           if (ipSectionType[0] == 4) {
             ipSectionData = await this.readBytes(4);
@@ -448,7 +476,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           }
 
           client.sock.end();
-          
+
           delete this.clients[clientID];
             
           if (!(foundServer.clients instanceof VirtualPorts)) {
@@ -561,6 +589,8 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
     // Connect to the server running on the remote machine
     this.connection = await this.sshInstance.forwardOut("127.0.0.1", 4096, "127.0.0.1", port);
+    this.connection.addListener("readable", this.readByteCallback.bind(this));
+    
     await new Promise((res) => setTimeout(res, 100));
     
     this.handleProtocol();
