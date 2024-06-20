@@ -1,8 +1,10 @@
 import { resolve as pathResolver } from "node:path";
+import { createSocket, type Socket as UDPSocket } from "node:dgram";
 import { Socket } from "node:net";
 
-import type { Channel } from "ssh2";
 import { NodeSSH } from "node-ssh";
+
+import type { Channel } from "ssh2";
 
 import type {
   BackendBaseClass,
@@ -18,9 +20,55 @@ import type {
 // So if you're confused, this is why.
 const sshpyPath = pathResolver(import.meta.dirname, "../../blob/sshpy.py");
 
-class VirtualPorts {
-  constructor() {
+type VirtualPortOutput = (message: Uint8Array | Buffer, ip: string, port: number) => void | Promise<void>;
 
+class VirtualPorts {
+  clients: Record<string, UDPSocket>;
+
+  outputCallers: VirtualPortOutput[];
+  
+  ip: string;
+  port: number;
+  udpVer: "udp4" | "udp6";
+
+  constructor(ip: string, port: number, udpVer?: 4 | 6) {
+    this.clients = {};
+    this.outputCallers = [];
+
+    this.ip = ip;
+    this.port = port;
+
+    if (!udpVer) {
+      // @ts-expect-error: This does work
+      this.udpVer = "udp" + (ip.includes(":") ? 6 : 4);
+    } else {
+      // @ts-expect-error: This does work
+      this.udpVer = "udp" + udpVer;
+    }
+  }
+
+  async send(ip: string, port: number, message: Uint8Array | Buffer) {
+    if (!this.clients[`${ip}:${port}`]) {
+      const udpSocket = createSocket(this.udpVer);
+
+      udpSocket.on("message", (msg) => {
+        for (const caller of this.outputCallers) {
+          try {
+            caller(msg, ip, port);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      });
+
+      this.clients[`${ip}:${port}`] = udpSocket;
+    }
+
+    this.clients[`${ip}:${port}`].send(message, this.port, this.ip);
+  }
+
+  setOutput(output: VirtualPortOutput) {
+    this.outputCallers.push(output);
   }
 }
 
@@ -338,6 +386,21 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             
             if (!foundProxy) {
               this.logs.push("WARN: Got TCP proxy initation reply, but proxy could not be found");
+              this.logs.push("Please report this issue.");
+              break;
+            }
+            
+            this.queuedProxies.splice(this.queuedProxies.indexOf(foundProxy), 1);
+            this.proxies.push(foundProxy);
+          } else if (inResponseTo == RequestTypes.UDP_INITIATE_FORWARD_RULE) {
+            const portRaw = await this.readBytes(4);
+            const port = convertToInt32(portRaw);
+
+            const foundProxy = this.queuedProxies.find((i) => i.destPort == port);
+            
+            if (!foundProxy) {
+              this.logs.push("WARN: Got UDP proxy initation reply, but proxy could not be found");
+              this.logs.push("Please report this issue.");
               break;
             }
             
@@ -450,21 +513,6 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           break;
         }
 
-        case RequestTypes.TCP_MESSAGE: {
-          const clientID = convertToInt32(await this.readBytes(4));
-          const packetLen = convertToInt32(await this.readBytes(4));
-          const packet = await this.readBytes(packetLen);
-          
-          const client = this.clients[clientID];
-          
-          if (!client || !client.sock) {
-            break;
-          }
-
-          client.sock.write(packet);
-          break;
-        }
-
         case RequestTypes.TCP_CLOSE_CONNECTION: {
           const clientID = convertToInt32(await this.readBytes(4));
           const client = this.clients[clientID];
@@ -482,6 +530,57 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           if (!(foundServer.clients instanceof VirtualPorts)) {
             delete foundServer.clients[clientID];
           }
+        }
+
+        case RequestTypes.TCP_MESSAGE: {
+          const clientID = convertToInt32(await this.readBytes(4));
+          const packetLen = convertToInt32(await this.readBytes(4));
+          const packet = await this.readBytes(packetLen);
+          
+          const client = this.clients[clientID];
+          
+          if (!client || !client.sock) {
+            break;
+          }
+
+          client.sock.write(packet);
+          break;
+        }
+
+        case RequestTypes.UDP_MESSAGE: {
+          const ipSectionType = await this.readBytes(1);
+          let ipSectionData: Uint8Array;
+
+          if (ipSectionType[0] == 4) {
+            ipSectionData = await this.readBytes(4);
+          } else if (ipSectionType[1] == 6) {
+            ipSectionData = await this.readBytes(16);
+          } else {
+            break;
+          }
+
+          const ipSection = new Uint8Array(ipSectionData.length + 1);
+          ipSection.set(ipSectionType, 0);
+          ipSection.set(ipSectionData, 1);
+
+          const ip = parseIPSection(ipSection);
+          
+          const clientPort = convertToInt32(await this.readBytes(4));
+          const destPort = convertToInt32(await this.readBytes(4));
+
+          const packetLength = convertToInt32(await this.readBytes(4));
+          const packet = await this.readBytes(packetLength);
+
+          const proxy = this.proxies.find((i) => i.destPort == destPort);
+
+          if (!proxy || !(proxy.clients instanceof VirtualPorts)) {
+            break;
+          }
+
+          proxy.clients.send(ip, clientPort, packet);
+
+          // TODO
+          break;
         }
       }
     }
@@ -635,7 +734,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       sourcePort,
       destPort,
       
-      clients: protocol == "tcp" ? [] : new VirtualPorts()
+      clients: protocol == "tcp" ? [] : new VirtualPorts(sourceIP, sourcePort)
     };
 
     this.queuedProxies.push(proxy);
@@ -646,6 +745,27 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     const connAddRequest = new Uint8Array(5);
     connAddRequest[0] = reqProtocol;
     connAddRequest.set(reqDestPort, 1);
+
+    if (protocol == "udp" && proxy.clients instanceof VirtualPorts) {
+      proxy.clients.setOutput((message, ip, port) => {
+        const encodedIP = makeIPSection(ip);
+        const encodedPort = convertInt32ToArr(port);
+
+        const messageSize = convertInt32ToArr(message.length);
+
+        const messageToSend = new Uint8Array(1 + (4 * 3) + encodedIP.length + message.length);
+
+        messageToSend[0] = RequestTypes.UDP_MESSAGE;
+        
+        messageToSend.set(encodedIP, 1);
+        messageToSend.set(encodedPort, 1 + encodedIP.length);
+        messageToSend.set(reqDestPort, 1 + encodedIP.length + (4 * 1));
+        messageToSend.set(messageSize, 1 + encodedIP.length + (4 * 2));
+        messageToSend.set(message, 1 + encodedIP.length + (4 * 3));
+
+        this.connection.write(messageToSend);
+      });
+    }
 
     this.connection.write(connAddRequest);
   }

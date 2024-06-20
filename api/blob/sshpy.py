@@ -124,9 +124,14 @@ class TCPWrappedSocket:
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
   pass
 
+class ThreadedUDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
+  pass
+
 class RequestHandler(socketserver.BaseRequestHandler):
   tcp_sockets: dict[int, TCPWrappedSocket] = {}
   tcp_current_client_id: int = 0
+
+  udp_servers: dict[int, ThreadedUDPServer] = {}
 
   def read(self, byte_cnt: int) -> bytearray:
     local_buf: bytearray = bytearray(byte_cnt)
@@ -189,6 +194,20 @@ class RequestHandler(socketserver.BaseRequestHandler):
         self.request.sendall(bytes([RequestTypes.TCP_CLOSE_CONNECTION.value] + wrapped_client_id))
         self.tcp_sockets.pop(client_id, None)
         return
+      
+  def on_udp_callback(self, sock_server: socketserver.BaseRequestHandler):
+    client_ip, client_port = sock_server.client_address
+    server_ip, server_port = sock_server.request[1].getsockname()
+
+    client_wrapped_ip = make_ip_section(client_ip)
+    client_wrapped_port = convert_int32_to_arr(client_port)
+    server_wrapped_port = convert_int32_to_arr(server_port)
+
+    # wtf? the python docs tell us to do this /shrug
+    data = sock_server.request[0]
+
+    encoded_length = convert_int32_to_arr(len(data))
+    self.request.sendall(bytes([RequestTypes.UDP_MESSAGE.value]) + client_wrapped_ip + bytes(client_wrapped_port + server_wrapped_port + encoded_length) + data)
 
   def handle(self):
     while True:
@@ -198,13 +217,13 @@ class RequestHandler(socketserver.BaseRequestHandler):
         port_raw_byte = self.read(4)
         port = convert_to_int32(port_raw_byte)
 
-        tcp_class = generate_tcp_forward_rule_class(self.on_tcp_callback)
+        tcp_class = generate_forward_rule_class(self.on_tcp_callback)
 
         try:
           server = ThreadedTCPServer(("0.0.0.0", port), tcp_class)
         except OSError:
           print(f"warn: Failed to listen on ::{port}")
-          self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.GENERAL_FAILURE.value, 0xFF]))
+          self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.GENERAL_FAILURE.value]) + original_identifier + port_raw_byte)
           continue
 
         print(f"info: Started listening on ::{port}")
@@ -214,7 +233,25 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.UDP_INITIATE_FORWARD_RULE.value:
-        pass
+        port_raw_byte = self.read(4)
+        port = convert_to_int32(port_raw_byte)
+
+        udp_class = generate_forward_rule_class(self.on_udp_callback)
+
+        try:
+          server = ThreadedUDPServer(("0.0.0.0", port), udp_class)
+          self.udp_servers[port] = server
+        except OSError:
+          print(f"warn: Failed to listen on ::{port}")
+          self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.GENERAL_FAILURE.value]) + original_identifier + port_raw_byte)
+          continue
+
+        print(f"info: Started listening on ::{port}")
+        thread = threading.Thread(target=server.serve_forever)
+        thread.daemon = True
+        thread.start()
+
+        self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.TCP_MESSAGE.value:
         original_client_id = self.read(4)
         client_id = convert_to_int32(original_client_id)
@@ -245,6 +282,18 @@ class RequestHandler(socketserver.BaseRequestHandler):
         ip = parse_ip_section(ip_section)
 
         port = convert_to_int32(self.read(4))
+        
+        server_port = convert_to_int32(self.read(4))
+        packet_len = convert_to_int32(self.read(4))
+        packet = self.read(packet_len)
+
+        if not server_port in self.udp_servers:
+          continue
+
+        try:
+          self.udp_servers[server_port].socket.sendto(packet, (ip, port))
+        except (ConnectionResetError, BrokenPipeError, OSError):
+          pass
       elif original_identifier[0] == RequestTypes.TCP_CLOSE_CONNECTION.value:
         client_id = convert_to_int32(self.read(4))
 
@@ -283,8 +332,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
       else:
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.UNKNOWN_MESSAGE.value]) + original_identifier)
 
-def generate_tcp_forward_rule_class(on_conn_callback: Callable[[socketserver.BaseRequestHandler], any]) -> socketserver.BaseRequestHandler:
-  class TCPForwardServer(socketserver.BaseRequestHandler):
+def generate_forward_rule_class(on_conn_callback: Callable[[socketserver.BaseRequestHandler], any]) -> socketserver.BaseRequestHandler:
+  class ForwardServer(socketserver.BaseRequestHandler):
     def __init__(self, request, client_address, server):
       self.callback = on_conn_callback
       super().__init__(request, client_address, server)
@@ -292,7 +341,7 @@ def generate_tcp_forward_rule_class(on_conn_callback: Callable[[socketserver.Bas
     def handle(self):
       self.callback(self)
   
-  return TCPForwardServer
+  return ForwardServer
 
 def main():
   print("Initializing...")
