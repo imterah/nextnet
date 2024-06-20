@@ -530,6 +530,8 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           if (!(foundServer.clients instanceof VirtualPorts)) {
             delete foundServer.clients[clientID];
           }
+
+          break;
         }
 
         case RequestTypes.TCP_MESSAGE: {
