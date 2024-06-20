@@ -33,7 +33,7 @@ export function route(routeOptions: RouteOptions) {
             name: { type: "string" },
             description: { type: "string" },
             backend: { type: "string" },
-            connectionDetails: { type: "string" }
+            connectionDetails: { type: "string" },
           },
         },
       },
@@ -60,10 +60,9 @@ export function route(routeOptions: RouteOptions) {
         });
       }
 
-      const connectionDetailsValidityCheck =
-        backendProviders[body.backend].checkParametersBackendInstance(
-          body.connectionDetails,
-        );
+      const connectionDetailsValidityCheck = backendProviders[
+        body.backend
+      ].checkParametersBackendInstance(body.connectionDetails);
 
       if (!connectionDetailsValidityCheck.success) {
         return res.status(400).send({

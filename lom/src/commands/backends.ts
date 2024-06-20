@@ -204,7 +204,7 @@ export async function run(
         }
 
         unstringifiedArguments.username = options.username;
-        
+
         unstringifiedArguments.privateKey = options.sshKey?.replaceAll(
           "\\n",
           "\n",

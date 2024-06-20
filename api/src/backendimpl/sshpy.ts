@@ -20,13 +20,17 @@ import type {
 // So if you're confused, this is why.
 const sshpyPath = pathResolver(import.meta.dirname, "../../blob/sshpy.py");
 
-type VirtualPortOutput = (message: Uint8Array | Buffer, ip: string, port: number) => void | Promise<void>;
+type VirtualPortOutput = (
+  message: Uint8Array | Buffer,
+  ip: string,
+  port: number,
+) => void | Promise<void>;
 
 class VirtualPorts {
   clients: Record<string, UDPSocket>;
 
   outputCallers: VirtualPortOutput[];
-  
+
   ip: string;
   port: number;
   udpVer: "udp4" | "udp6";
@@ -51,7 +55,7 @@ class VirtualPorts {
     if (!this.clients[`${ip}:${port}`]) {
       const udpSocket = createSocket(this.udpVer);
 
-      udpSocket.on("message", (msg) => {
+      udpSocket.on("message", msg => {
         for (const caller of this.outputCallers) {
           try {
             caller(msg, ip, port);
@@ -77,14 +81,16 @@ function makeIPSection(ip: string): Uint8Array {
     const ipSection = new Uint8Array(5);
     ipSection[0] = 4;
 
-    const splitIP = ip.split(".").map((i) => parseInt(i));
+    const splitIP = ip.split(".").map(i => parseInt(i));
 
     // Checks if the current octet:
     // 1. Is not a number
     // 2. Is less than 0
     // 3. Is greater than 255
-    const isIllegalFormat = splitIP.some((i) => Number.isNaN(i) || i < 0 || i > 255);
-    
+    const isIllegalFormat = splitIP.some(
+      i => Number.isNaN(i) || i < 0 || i > 255,
+    );
+
     // Check if it's illegal or we have too much or too little octets
     if (isIllegalFormat || splitIP.length != 4) {
       throw new Error("Illegal IPv4 address recieved");
@@ -133,9 +139,9 @@ function parseIPSection(ipBlock: Uint8Array): string {
     return ipBlock.slice(1, 5).join(".");
   } else if (ipBlock[1] == 6) {
     let address: string = "";
-    
+
     const realIP = ipBlock.slice(1, 17);
-    
+
     for (const octetIndexStr in realIP) {
       const octetIndex = parseInt(octetIndexStr);
       const octet = realIP[octetIndex];
@@ -180,12 +186,12 @@ enum RequestTypes {
 
   // On client & server
   STATUS = 0,
-  
+
   TCP_CLOSE_CONNECTION = 6,
   TCP_MESSAGE = 7,
   UDP_MESSAGE = 8,
-  NOP = 255
-};
+  NOP = 255,
+}
 
 enum StatusTypes {
   SUCCESS = 0,
@@ -193,7 +199,7 @@ enum StatusTypes {
   UNKNOWN_MESSAGE,
   MISSING_PARAMETERS,
   ALREADY_LISTENING,
-};
+}
 
 type BackendProvider = {
   ip: string;
@@ -209,12 +215,12 @@ type BackendProvider = {
 type TCPForwardRule = {
   protocol: "tcp";
   clients: Record<number, Socket>;
-}
+};
 
 type UDPForwardRule = {
   protocol: "udp";
   clients: VirtualPorts;
-}
+};
 
 type ForwardRuleExt = ForwardRule & (TCPForwardRule | UDPForwardRule);
 
@@ -255,11 +261,17 @@ function parseBackendProviderString(data: string): BackendProvider {
 
   // SSHpy settings
 
-  if (typeof jsonData.pythonListeningPort != "undefined" && typeof jsonData.pythonListeningPort != "number") {
+  if (
+    typeof jsonData.pythonListeningPort != "undefined" &&
+    typeof jsonData.pythonListeningPort != "number"
+  ) {
     throw new Error("Port is not a number");
   }
 
-  if (typeof jsonData.pythonRuntime != "undefined" && typeof jsonData.pythonRuntime != "string") {
+  if (
+    typeof jsonData.pythonRuntime != "undefined" &&
+    typeof jsonData.pythonRuntime != "string"
+  ) {
     throw new Error("Python runtime is not a string");
   }
 
@@ -320,8 +332,11 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     const data: Buffer = this.connection.read();
     if (data == null) return;
 
-    while (this.messageBufLock || data.length + this.messageLastIndex > this.messageBuffer.length) {
-      await new Promise((i) => setTimeout(i, 1));
+    while (
+      this.messageBufLock ||
+      data.length + this.messageLastIndex > this.messageBuffer.length
+    ) {
+      await new Promise(i => setTimeout(i, 1));
     }
 
     this.messageBufLock = true;
@@ -332,15 +347,18 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
   private async readBytes(size: number): Promise<Uint8Array> {
     while (this.messageBufLock || this.messageLastIndex < size) {
-      await new Promise((i) => setTimeout(i, 1));
+      await new Promise(i => setTimeout(i, 1));
     }
 
     this.messageBufLock = true;
     const data = this.messageBuffer.slice(0, size);
-    
-    this.messageBuffer.set(this.messageBuffer.slice(size, this.messageLastIndex), 0);
+
+    this.messageBuffer.set(
+      this.messageBuffer.slice(size, this.messageLastIndex),
+      0,
+    );
     this.messageLastIndex -= size;
-    
+
     this.messageBufLock = false;
 
     return data;
@@ -349,14 +367,16 @@ export class SSHPyBackendProvider implements BackendBaseClass {
   async handleProtocol() {
     while (true) {
       const messageType: number = (await this.readBytes(1))[0];
-      
+
       switch (messageType) {
         default: {
-          this.connection.write(new Uint8Array([
-            RequestTypes.STATUS,
-            StatusTypes.UNKNOWN_MESSAGE,
-            messageType
-          ]));
+          this.connection.write(
+            new Uint8Array([
+              RequestTypes.STATUS,
+              StatusTypes.UNKNOWN_MESSAGE,
+              messageType,
+            ]),
+          );
 
           break;
         }
@@ -369,7 +389,9 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             const statusName = StatusTypes[statusType];
             const responseName = RequestTypes[inResponseTo];
 
-            this.logs.push("ERROR: Recieved an error code from the server: " + statusName);
+            this.logs.push(
+              "ERROR: Recieved an error code from the server: " + statusName,
+            );
 
             if (responseName != "NOP") {
               this.logs.push("Failed in: " + responseName);
@@ -382,32 +404,42 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             const portRaw = await this.readBytes(4);
             const port = convertToInt32(portRaw);
 
-            const foundProxy = this.queuedProxies.find((i) => i.destPort == port);
-            
+            const foundProxy = this.queuedProxies.find(i => i.destPort == port);
+
             if (!foundProxy) {
-              this.logs.push("WARN: Got TCP proxy initation reply, but proxy could not be found");
+              this.logs.push(
+                "WARN: Got TCP proxy initation reply, but proxy could not be found",
+              );
               this.logs.push("Please report this issue.");
               break;
             }
-            
-            this.queuedProxies.splice(this.queuedProxies.indexOf(foundProxy), 1);
+
+            this.queuedProxies.splice(
+              this.queuedProxies.indexOf(foundProxy),
+              1,
+            );
             this.proxies.push(foundProxy);
           } else if (inResponseTo == RequestTypes.UDP_INITIATE_FORWARD_RULE) {
             const portRaw = await this.readBytes(4);
             const port = convertToInt32(portRaw);
 
-            const foundProxy = this.queuedProxies.find((i) => i.destPort == port);
-            
+            const foundProxy = this.queuedProxies.find(i => i.destPort == port);
+
             if (!foundProxy) {
-              this.logs.push("WARN: Got UDP proxy initation reply, but proxy could not be found");
+              this.logs.push(
+                "WARN: Got UDP proxy initation reply, but proxy could not be found",
+              );
               this.logs.push("Please report this issue.");
               break;
             }
-            
-            this.queuedProxies.splice(this.queuedProxies.indexOf(foundProxy), 1);
+
+            this.queuedProxies.splice(
+              this.queuedProxies.indexOf(foundProxy),
+              1,
+            );
             this.proxies.push(foundProxy);
           }
-          
+
           break;
         }
 
@@ -428,12 +460,12 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           ipSection.set(ipSectionData, 1);
 
           const ip = parseIPSection(ipSection);
-          
+
           const clientPort = convertToInt32(await this.readBytes(4));
           const destPort = convertToInt32(await this.readBytes(4));
           const clientID = convertToInt32(await this.readBytes(4));
 
-          const foundServer = this.proxies.find((i) => i.destPort == destPort);
+          const foundServer = this.proxies.find(i => i.destPort == destPort);
 
           if (!foundServer) {
             break;
@@ -451,12 +483,12 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             port: clientPort,
 
             connectionDetails: foundServer,
-            sock
+            sock,
           };
 
-          sock.on("data", (data) => {
+          sock.on("data", data => {
             const tcpMessagePacket = new Uint8Array(data.length + 9);
-            
+
             tcpMessagePacket[0] = RequestTypes.TCP_MESSAGE;
             tcpMessagePacket.set(convertInt32ToArr(clientID), 1);
             tcpMessagePacket.set(convertInt32ToArr(data.length), 5);
@@ -471,11 +503,13 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             if (!(foundServer.clients instanceof VirtualPorts)) {
               delete foundServer.clients[clientID];
             }
-            
-            this.connection.write(new Uint8Array([
-              RequestTypes.TCP_CLOSE_CONNECTION,
-              ...convertInt32ToArr(clientID)
-            ]));
+
+            this.connection.write(
+              new Uint8Array([
+                RequestTypes.TCP_CLOSE_CONNECTION,
+                ...convertInt32ToArr(clientID),
+              ]),
+            );
           });
 
           sock.on("error", () => {
@@ -483,31 +517,42 @@ export class SSHPyBackendProvider implements BackendBaseClass {
               sock.end();
             } catch (e) {
               //
-            };
+            }
 
             delete this.clients[clientID];
-            
+
             if (!(foundServer.clients instanceof VirtualPorts)) {
               delete foundServer.clients[clientID];
             }
-            
-            this.connection.write(new Uint8Array([
-              RequestTypes.TCP_CLOSE_CONNECTION,
-              ...convertInt32ToArr(clientID)
-            ]));
+
+            this.connection.write(
+              new Uint8Array([
+                RequestTypes.TCP_CLOSE_CONNECTION,
+                ...convertInt32ToArr(clientID),
+              ]),
+            );
           });
 
           sock.connect(foundServer.sourcePort, foundServer.sourceIP);
 
-          const statusMessage = new Uint8Array(ipSection.length + (4 * 3) + 3);
+          const statusMessage = new Uint8Array(ipSection.length + 4 * 3 + 3);
           statusMessage[0] = RequestTypes.STATUS;
           statusMessage[1] = StatusTypes.SUCCESS;
           statusMessage[2] = RequestTypes.TCP_INITIATE_CONNECTION;
-             
+
           statusMessage.set(ipSection, 3);
-          statusMessage.set(new Uint8Array(convertInt32ToArr(clientPort)), 3 + ipSection.length + 0);
-          statusMessage.set(new Uint8Array(convertInt32ToArr(destPort)), 3 + ipSection.length + 4);
-          statusMessage.set(new Uint8Array(convertInt32ToArr(clientID)), 3 + ipSection.length + 8);
+          statusMessage.set(
+            new Uint8Array(convertInt32ToArr(clientPort)),
+            3 + ipSection.length + 0,
+          );
+          statusMessage.set(
+            new Uint8Array(convertInt32ToArr(destPort)),
+            3 + ipSection.length + 4,
+          );
+          statusMessage.set(
+            new Uint8Array(convertInt32ToArr(clientID)),
+            3 + ipSection.length + 8,
+          );
 
           this.connection.write(statusMessage);
           break;
@@ -517,7 +562,9 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           const clientID = convertToInt32(await this.readBytes(4));
           const client = this.clients[clientID];
 
-          const foundServer = this.proxies.find((i) => !(i.clients instanceof VirtualPorts) ? i.clients[clientID] : false);
+          const foundServer = this.proxies.find(i =>
+            !(i.clients instanceof VirtualPorts) ? i.clients[clientID] : false,
+          );
 
           if (!client || !client.sock || !foundServer) {
             break;
@@ -526,7 +573,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           client.sock.end();
 
           delete this.clients[clientID];
-            
+
           if (!(foundServer.clients instanceof VirtualPorts)) {
             delete foundServer.clients[clientID];
           }
@@ -538,9 +585,9 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           const clientID = convertToInt32(await this.readBytes(4));
           const packetLen = convertToInt32(await this.readBytes(4));
           const packet = await this.readBytes(packetLen);
-          
+
           const client = this.clients[clientID];
-          
+
           if (!client || !client.sock) {
             break;
           }
@@ -566,14 +613,14 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           ipSection.set(ipSectionData, 1);
 
           const ip = parseIPSection(ipSection);
-          
+
           const clientPort = convertToInt32(await this.readBytes(4));
           const destPort = convertToInt32(await this.readBytes(4));
 
           const packetLength = convertToInt32(await this.readBytes(4));
           const packet = await this.readBytes(packetLength);
 
-          const proxy = this.proxies.find((i) => i.destPort == destPort);
+          const proxy = this.proxies.find(i => i.destPort == destPort);
 
           if (!proxy || !(proxy.clients instanceof VirtualPorts)) {
             break;
@@ -649,37 +696,54 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     this.logs.push("Successfully connected to the server. Initializing sshpy");
 
     // Stop & delete existing sshpy instances
-    await this.sshInstance.exec("pkill", ["-SIGINT", "-f", `${pythonRuntime} /tmp/sshpy.py`]);
+    await this.sshInstance.exec("pkill", [
+      "-SIGINT",
+      "-f",
+      `${pythonRuntime} /tmp/sshpy.py`,
+    ]);
 
-    if (process.env.NODE_ENV != "production" && !process.env.SSHPY_BYPASS_AUTOMATIC_SERVER_SETUP) {
-      const serverKillPort = await this.sshInstance.exec("lsof", ["-t", `-i:${port}`]);
-    
+    if (
+      process.env.NODE_ENV != "production" &&
+      !process.env.SSHPY_BYPASS_AUTOMATIC_SERVER_SETUP
+    ) {
+      const serverKillPort = await this.sshInstance.exec("lsof", [
+        "-t",
+        `-i:${port}`,
+      ]);
+
       if (serverKillPort) {
         await this.sshInstance.exec("kill", ["-9", serverKillPort]);
       }
-  
+
       await this.sshInstance.exec("rm", ["-rf", "/tmp/sshpy.py"]);
       await this.sshInstance.putFile(sshpyPath, "/tmp/sshpy.py");
-      
+
       // This is an asynchronous function, but there isn't really a good way to wait until an
       // the server starts, so we just sleep instead, and check if the port is alive.
-  
+
       try {
-        this.sshInstance.exec(pythonRuntime, ["-u", "/tmp/sshpy.py", `${port}`], {
-          onStdout: this.onStdout.bind(this),
-          onStderr: this.onStdout.bind(this)
-        });
+        this.sshInstance.exec(
+          pythonRuntime,
+          ["-u", "/tmp/sshpy.py", `${port}`],
+          {
+            onStdout: this.onStdout.bind(this),
+            onStderr: this.onStdout.bind(this),
+          },
+        );
       } catch (e) {
         this.state = "stopped";
         this.logs.push("Server (sshpy) failed to start.");
-  
+
         return false;
       }
     }
 
-    await new Promise((res) => setTimeout(res, 1000));
-    const serverPortIsAlive = await this.sshInstance.exec("lsof", ["-t", `-i:${port}`]);
-    
+    await new Promise(res => setTimeout(res, 1000));
+    const serverPortIsAlive = await this.sshInstance.exec("lsof", [
+      "-t",
+      `-i:${port}`,
+    ]);
+
     // If the string is empty, the server isn't running
     if (!serverPortIsAlive) {
       this.state = "stopped";
@@ -689,13 +753,18 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     }
 
     // Connect to the server running on the remote machine
-    this.connection = await this.sshInstance.forwardOut("127.0.0.1", 4096, "127.0.0.1", port);
+    this.connection = await this.sshInstance.forwardOut(
+      "127.0.0.1",
+      4096,
+      "127.0.0.1",
+      port,
+    );
     this.connection.addListener("readable", this.readByteCallback.bind(this));
-    
-    await new Promise((res) => setTimeout(res, 100));
-    
+
+    await new Promise(res => setTimeout(res, 100));
+
     this.handleProtocol();
-    
+
     this.state = "started";
     this.logs.push("Successfully started SSHPyBackendProvider.");
 
@@ -735,13 +804,16 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       sourceIP,
       sourcePort,
       destPort,
-      
-      clients: protocol == "tcp" ? [] : new VirtualPorts(sourceIP, sourcePort)
+
+      clients: protocol == "tcp" ? [] : new VirtualPorts(sourceIP, sourcePort),
     };
 
     this.queuedProxies.push(proxy);
 
-    const reqProtocol = protocol == "tcp" ? RequestTypes.TCP_INITIATE_FORWARD_RULE : RequestTypes.UDP_INITIATE_FORWARD_RULE;
+    const reqProtocol =
+      protocol == "tcp"
+        ? RequestTypes.TCP_INITIATE_FORWARD_RULE
+        : RequestTypes.UDP_INITIATE_FORWARD_RULE;
     const reqDestPort = convertInt32ToArr(destPort);
 
     const connAddRequest = new Uint8Array(5);
@@ -755,15 +827,17 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
         const messageSize = convertInt32ToArr(message.length);
 
-        const messageToSend = new Uint8Array(1 + (4 * 3) + encodedIP.length + message.length);
+        const messageToSend = new Uint8Array(
+          1 + 4 * 3 + encodedIP.length + message.length,
+        );
 
         messageToSend[0] = RequestTypes.UDP_MESSAGE;
-        
+
         messageToSend.set(encodedIP, 1);
         messageToSend.set(encodedPort, 1 + encodedIP.length);
-        messageToSend.set(reqDestPort, 1 + encodedIP.length + (4 * 1));
-        messageToSend.set(messageSize, 1 + encodedIP.length + (4 * 2));
-        messageToSend.set(message, 1 + encodedIP.length + (4 * 3));
+        messageToSend.set(reqDestPort, 1 + encodedIP.length + 4 * 1);
+        messageToSend.set(messageSize, 1 + encodedIP.length + 4 * 2);
+        messageToSend.set(message, 1 + encodedIP.length + 4 * 3);
 
         this.connection.write(messageToSend);
       });
@@ -778,14 +852,25 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     destPort: number,
     protocol: "tcp" | "udp",
   ): void {
-    const proxy = this.proxies.find((i) => i.sourceIP == sourceIP && i.sourcePort == sourcePort && i.destPort == destPort && i.protocol == protocol);
+    const proxy = this.proxies.find(
+      i =>
+        i.sourceIP == sourceIP &&
+        i.sourcePort == sourcePort &&
+        i.destPort == destPort &&
+        i.protocol == protocol,
+    );
     if (!proxy) return;
 
-    const reqProtocol = protocol == "tcp" ? RequestTypes.TCP_CLOSE_FORWARD_RULE : RequestTypes.UDP_CLOSE_FORWARD_RULE;
+    const reqProtocol =
+      protocol == "tcp"
+        ? RequestTypes.TCP_CLOSE_FORWARD_RULE
+        : RequestTypes.UDP_CLOSE_FORWARD_RULE;
     const reqIPSection = makeIPSection(sourceIP);
     const reqDestPort = convertInt32ToArr(destPort);
 
-    const connRemoveRequest = new Uint8Array(1 + reqIPSection.length + reqDestPort.length);
+    const connRemoveRequest = new Uint8Array(
+      1 + reqIPSection.length + reqDestPort.length,
+    );
     connRemoveRequest[0] = reqProtocol;
     connRemoveRequest.set(reqIPSection, 1);
     connRemoveRequest.set(reqDestPort, reqIPSection.length + 1);
@@ -805,7 +890,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
   }
 
   getAllConnections(): ConnectedClient[] {
-    return Object.keys(this.clients).map((i) => this.clients[parseInt(i)]);
+    return Object.keys(this.clients).map(i => this.clients[parseInt(i)]);
   }
 
   static checkParametersConnection(): ParameterReturnedValue {
