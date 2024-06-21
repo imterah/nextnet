@@ -20,6 +20,64 @@ import type {
 // So if you're confused, this is why.
 const sshpyPath = pathResolver(import.meta.dirname, "../../blob/sshpy.py");
 
+enum RequestTypes {
+  // Only on the server
+  TCP_INITIATE_CONNECTION = 5,
+
+  // Only on the client
+  TCP_INITIATE_FORWARD_RULE = 1,
+  UDP_INITIATE_FORWARD_RULE = 2,
+  TCP_CLOSE_FORWARD_RULE = 3,
+  UDP_CLOSE_FORWARD_RULE = 4,
+
+  // On client & server
+  STATUS = 0,
+
+  TCP_CLOSE_CONNECTION = 6,
+  TCP_MESSAGE = 7,
+  UDP_MESSAGE = 8,
+  NOP = 255,
+}
+
+enum StatusTypes {
+  SUCCESS = 0,
+  GENERAL_FAILURE,
+  UNKNOWN_MESSAGE,
+  MISSING_PARAMETERS,
+  ALREADY_LISTENING,
+}
+
+type BackendProvider = {
+  ip: string;
+  port: number;
+
+  username: string;
+  privateKey: string;
+
+  pythonListeningPort?: number;
+  pythonRuntime?: string;
+};
+
+type TCPForwardRule = {
+  protocol: "tcp";
+  clients: Record<number, Socket>;
+};
+
+type UDPForwardRule = {
+  protocol: "udp";
+  clients: VirtualPorts;
+};
+
+type ForwardRuleExt = ForwardRule & (TCPForwardRule | UDPForwardRule);
+
+type ConnectedClientExt = {
+  ip: string;
+  port: number;
+
+  connectionDetails: ForwardRuleExt;
+  sock?: Socket;
+};
+
 type VirtualPortOutput = (
   message: Uint8Array | Buffer,
   ip: string,
@@ -173,64 +231,6 @@ function convertInt32ToArr(num: number): Uint8Array {
 
   return data;
 }
-
-enum RequestTypes {
-  // Only on the server
-  TCP_INITIATE_CONNECTION = 5,
-
-  // Only on the client
-  TCP_INITIATE_FORWARD_RULE = 1,
-  UDP_INITIATE_FORWARD_RULE = 2,
-  TCP_CLOSE_FORWARD_RULE = 3,
-  UDP_CLOSE_FORWARD_RULE = 4,
-
-  // On client & server
-  STATUS = 0,
-
-  TCP_CLOSE_CONNECTION = 6,
-  TCP_MESSAGE = 7,
-  UDP_MESSAGE = 8,
-  NOP = 255,
-}
-
-enum StatusTypes {
-  SUCCESS = 0,
-  GENERAL_FAILURE,
-  UNKNOWN_MESSAGE,
-  MISSING_PARAMETERS,
-  ALREADY_LISTENING,
-}
-
-type BackendProvider = {
-  ip: string;
-  port: number;
-
-  username: string;
-  privateKey: string;
-
-  pythonListeningPort?: number;
-  pythonRuntime?: string;
-};
-
-type TCPForwardRule = {
-  protocol: "tcp";
-  clients: Record<number, Socket>;
-};
-
-type UDPForwardRule = {
-  protocol: "udp";
-  clients: VirtualPorts;
-};
-
-type ForwardRuleExt = ForwardRule & (TCPForwardRule | UDPForwardRule);
-
-type ConnectedClientExt = {
-  ip: string;
-  port: number;
-
-  connectionDetails: ForwardRuleExt;
-  sock?: Socket;
-};
 
 function parseBackendProviderString(data: string): BackendProvider {
   try {
@@ -871,6 +871,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     const connRemoveRequest = new Uint8Array(
       1 + reqIPSection.length + reqDestPort.length,
     );
+
     connRemoveRequest[0] = reqProtocol;
     connRemoveRequest.set(reqIPSection, 1);
     connRemoveRequest.set(reqDestPort, reqIPSection.length + 1);
