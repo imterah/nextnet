@@ -2,6 +2,7 @@ from typing import List, Callable
 from dataclasses import dataclass
 from enum import Enum
 
+from socket import SOL_SOCKET, SO_REUSEADDR
 import socketserver
 import threading
 import signal
@@ -131,6 +132,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
   tcp_sockets: dict[int, TCPWrappedSocket] = {}
   tcp_current_client_id: int = 0
 
+  tcp_servers: dict[int, ThreadedTCPServer] = {}
   udp_servers: dict[int, ThreadedUDPServer] = {}
 
   def read(self, byte_cnt: int) -> bytearray:
@@ -203,7 +205,6 @@ class RequestHandler(socketserver.BaseRequestHandler):
     client_wrapped_port = convert_int32_to_arr(client_port)
     server_wrapped_port = convert_int32_to_arr(server_port)
 
-    # wtf? the python docs tell us to do this /shrug
     data = sock_server.request[0]
 
     encoded_length = convert_int32_to_arr(len(data))
@@ -221,6 +222,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         try:
           server = ThreadedTCPServer(("0.0.0.0", port), tcp_class)
+          server.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+          self.tcp_servers[port] = server
         except OSError:
           print(f"warn: Failed to listen on ::{port}")
           self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.GENERAL_FAILURE.value]) + original_identifier + port_raw_byte)
@@ -232,6 +235,19 @@ class RequestHandler(socketserver.BaseRequestHandler):
         thread.start()
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
+      elif original_identifier[0] == RequestTypes.TCP_CLOSE_FORWARD_RULE.value:
+        port_raw_bytes = self.read(4)
+        port = convert_to_int32(port_raw_bytes)
+
+        if not port in self.tcp_servers:
+          continue
+
+        self.tcp_servers[port].shutdown()
+        self.tcp_servers[port].socket.close()
+        
+        self.tcp_servers.pop(port, None)
+
+        self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.UDP_INITIATE_FORWARD_RULE.value:
         port_raw_byte = self.read(4)
         port = convert_to_int32(port_raw_byte)
@@ -240,6 +256,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         try:
           server = ThreadedUDPServer(("0.0.0.0", port), udp_class)
+          server.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
           self.udp_servers[port] = server
         except OSError:
           print(f"warn: Failed to listen on ::{port}")
@@ -250,6 +267,19 @@ class RequestHandler(socketserver.BaseRequestHandler):
         thread = threading.Thread(target=server.serve_forever)
         thread.daemon = True
         thread.start()
+
+        self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
+      elif original_identifier[0] == RequestTypes.UDP_CLOSE_FORWARD_RULE.value:
+        port_raw_bytes = self.read(4)
+        port = convert_to_int32(port_raw_bytes)
+
+        if not port in self.udp_servers:
+          continue
+
+        self.udp_servers[port].shutdown()
+        self.udp_servers[port].socket.close()
+        
+        self.udp_servers.pop(port, None)
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.TCP_MESSAGE.value:
@@ -354,6 +384,8 @@ def main():
 
   with ThreadedTCPServer((HOST, PORT), RequestHandler) as server:
     ip, port = server.server_address
+
+    server.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
     print(f"Listening on {ip}:{port}")
     server.serve_forever()

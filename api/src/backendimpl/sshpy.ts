@@ -357,8 +357,8 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       this.messageBuffer.slice(size, this.messageLastIndex),
       0,
     );
-    this.messageLastIndex -= size;
 
+    this.messageLastIndex -= size;
     this.messageBufLock = false;
 
     return data;
@@ -396,8 +396,6 @@ export class SSHPyBackendProvider implements BackendBaseClass {
             if (responseName != "NOP") {
               this.logs.push("Failed in: " + responseName);
             }
-
-            break;
           }
 
           if (inResponseTo == RequestTypes.TCP_INITIATE_FORWARD_RULE) {
@@ -410,15 +408,19 @@ export class SSHPyBackendProvider implements BackendBaseClass {
               this.logs.push(
                 "WARN: Got TCP proxy initation reply, but proxy could not be found",
               );
+              
               this.logs.push("Please report this issue.");
               break;
             }
 
-            this.queuedProxies.splice(
-              this.queuedProxies.indexOf(foundProxy),
-              1,
-            );
-            this.proxies.push(foundProxy);
+            if (statusType == StatusTypes.SUCCESS) {
+              this.queuedProxies.splice(
+                this.queuedProxies.indexOf(foundProxy),
+                1,
+              );
+  
+              this.proxies.push(foundProxy);
+            }
           } else if (inResponseTo == RequestTypes.UDP_INITIATE_FORWARD_RULE) {
             const portRaw = await this.readBytes(4);
             const port = convertToInt32(portRaw);
@@ -429,15 +431,29 @@ export class SSHPyBackendProvider implements BackendBaseClass {
               this.logs.push(
                 "WARN: Got UDP proxy initation reply, but proxy could not be found",
               );
+
               this.logs.push("Please report this issue.");
               break;
             }
 
-            this.queuedProxies.splice(
-              this.queuedProxies.indexOf(foundProxy),
-              1,
+            if (statusType == StatusTypes.SUCCESS) {
+              this.queuedProxies.splice(
+                this.queuedProxies.indexOf(foundProxy),
+                1,
+              );
+  
+              this.proxies.push(foundProxy);
+            }
+          } else if (
+            inResponseTo == RequestTypes.TCP_CLOSE_FORWARD_RULE || 
+            inResponseTo == RequestTypes.UDP_CLOSE_FORWARD_RULE
+          ) {
+            const portRaw = await this.readBytes(4);
+            const port = convertToInt32(portRaw);
+
+            this.logs.push(
+              "INFO: Successfully closed forward rule on port ::" + port,
             );
-            this.proxies.push(foundProxy);
           }
 
           break;
@@ -541,14 +557,17 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           statusMessage[2] = RequestTypes.TCP_INITIATE_CONNECTION;
 
           statusMessage.set(ipSection, 3);
+          
           statusMessage.set(
             new Uint8Array(convertInt32ToArr(clientPort)),
             3 + ipSection.length + 0,
           );
+
           statusMessage.set(
             new Uint8Array(convertInt32ToArr(destPort)),
             3 + ipSection.length + 4,
           );
+
           statusMessage.set(
             new Uint8Array(convertInt32ToArr(clientID)),
             3 + ipSection.length + 8,
@@ -759,6 +778,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       "127.0.0.1",
       port,
     );
+
     this.connection.addListener("readable", this.readByteCallback.bind(this));
 
     await new Promise(res => setTimeout(res, 100));
@@ -814,6 +834,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       protocol == "tcp"
         ? RequestTypes.TCP_INITIATE_FORWARD_RULE
         : RequestTypes.UDP_INITIATE_FORWARD_RULE;
+    
     const reqDestPort = convertInt32ToArr(destPort);
 
     const connAddRequest = new Uint8Array(5);
@@ -865,23 +886,27 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       protocol == "tcp"
         ? RequestTypes.TCP_CLOSE_FORWARD_RULE
         : RequestTypes.UDP_CLOSE_FORWARD_RULE;
-    const reqIPSection = makeIPSection(sourceIP);
+      
     const reqDestPort = convertInt32ToArr(destPort);
 
     const connRemoveRequest = new Uint8Array(
-      1 + reqIPSection.length + reqDestPort.length,
+      1 + reqDestPort.length,
     );
 
     connRemoveRequest[0] = reqProtocol;
-    connRemoveRequest.set(reqIPSection, 1);
-    connRemoveRequest.set(reqDestPort, reqIPSection.length + 1);
+    connRemoveRequest.set(reqDestPort, 1);
 
     this.connection.write(connRemoveRequest);
 
     if (protocol == "tcp") {
-      for (const connection of proxy.clients as Socket[]) {
-        connection.end();
+      const clients: Record<number, Socket> = proxy.clients as Record<number, Socket>;
+
+      for (const connectionID of Object.keys(clients)) {
+        clients[parseInt(connectionID)].end();
       }
+    } else if (protocol == "udp" && proxy.clients instanceof VirtualPorts) {
+      proxy.clients.outputCallers = [];
+      proxy.clients.clients = {};
     }
 
     const proxyIndex = this.proxies.indexOf(proxy);
