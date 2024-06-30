@@ -232,6 +232,19 @@ function convertInt32ToArr(num: number): Uint8Array {
   return data;
 }
 
+function convertToInt16(arr: Uint8Array | number[]): number {
+  return (arr[0] << 8) | arr[1];
+}
+
+function convertInt16ToArr(num: number): Uint8Array {
+  const data = new Uint8Array(2);
+
+  data[0] = (num >> 8) & 0xff;
+  data[1] = num & 0xff;
+
+  return data;
+}
+
 function parseBackendProviderString(data: string): BackendProvider {
   try {
     JSON.parse(data);
@@ -328,6 +341,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     }
   }
 
+  // Someone optimize this code please.
   private async readByteCallback(): Promise<void> {
     const data: Buffer = this.connection.read();
     if (data == null) return;
@@ -399,8 +413,8 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           }
 
           if (inResponseTo == RequestTypes.TCP_INITIATE_FORWARD_RULE) {
-            const portRaw = await this.readBytes(4);
-            const port = convertToInt32(portRaw);
+            const portRaw = await this.readBytes(2);
+            const port = convertToInt16(portRaw);
 
             const foundProxy = this.queuedProxies.find(i => i.destPort == port);
 
@@ -408,7 +422,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
               this.logs.push(
                 "WARN: Got TCP proxy initation reply, but proxy could not be found",
               );
-              
+
               this.logs.push("Please report this issue.");
               break;
             }
@@ -418,12 +432,12 @@ export class SSHPyBackendProvider implements BackendBaseClass {
                 this.queuedProxies.indexOf(foundProxy),
                 1,
               );
-  
+
               this.proxies.push(foundProxy);
             }
           } else if (inResponseTo == RequestTypes.UDP_INITIATE_FORWARD_RULE) {
-            const portRaw = await this.readBytes(4);
-            const port = convertToInt32(portRaw);
+            const portRaw = await this.readBytes(2);
+            const port = convertToInt16(portRaw);
 
             const foundProxy = this.queuedProxies.find(i => i.destPort == port);
 
@@ -441,15 +455,15 @@ export class SSHPyBackendProvider implements BackendBaseClass {
                 this.queuedProxies.indexOf(foundProxy),
                 1,
               );
-  
+
               this.proxies.push(foundProxy);
             }
           } else if (
-            inResponseTo == RequestTypes.TCP_CLOSE_FORWARD_RULE || 
+            inResponseTo == RequestTypes.TCP_CLOSE_FORWARD_RULE ||
             inResponseTo == RequestTypes.UDP_CLOSE_FORWARD_RULE
           ) {
-            const portRaw = await this.readBytes(4);
-            const port = convertToInt32(portRaw);
+            const portRaw = await this.readBytes(2);
+            const port = convertToInt16(portRaw);
 
             this.logs.push(
               "INFO: Successfully closed forward rule on port ::" + port,
@@ -477,8 +491,8 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
           const ip = parseIPSection(ipSection);
 
-          const clientPort = convertToInt32(await this.readBytes(4));
-          const destPort = convertToInt32(await this.readBytes(4));
+          const clientPort = convertToInt16(await this.readBytes(2));
+          const destPort = convertToInt16(await this.readBytes(2));
           const clientID = convertToInt32(await this.readBytes(4));
 
           const foundServer = this.proxies.find(i => i.destPort == destPort);
@@ -503,12 +517,12 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           };
 
           sock.on("data", data => {
-            const tcpMessagePacket = new Uint8Array(data.length + 9);
+            const tcpMessagePacket = new Uint8Array(data.length + 7);
 
             tcpMessagePacket[0] = RequestTypes.TCP_MESSAGE;
             tcpMessagePacket.set(convertInt32ToArr(clientID), 1);
-            tcpMessagePacket.set(convertInt32ToArr(data.length), 5);
-            tcpMessagePacket.set(data, 9);
+            tcpMessagePacket.set(convertInt16ToArr(data.length), 5);
+            tcpMessagePacket.set(data, 7);
 
             this.connection.write(tcpMessagePacket);
           });
@@ -551,26 +565,26 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
           sock.connect(foundServer.sourcePort, foundServer.sourceIP);
 
-          const statusMessage = new Uint8Array(ipSection.length + 4 * 3 + 3);
+          const statusMessage = new Uint8Array(ipSection.length + 11);
           statusMessage[0] = RequestTypes.STATUS;
           statusMessage[1] = StatusTypes.SUCCESS;
           statusMessage[2] = RequestTypes.TCP_INITIATE_CONNECTION;
 
           statusMessage.set(ipSection, 3);
-          
+
           statusMessage.set(
-            new Uint8Array(convertInt32ToArr(clientPort)),
+            new Uint8Array(convertInt16ToArr(clientPort)),
             3 + ipSection.length + 0,
           );
 
           statusMessage.set(
-            new Uint8Array(convertInt32ToArr(destPort)),
-            3 + ipSection.length + 4,
+            new Uint8Array(convertInt16ToArr(destPort)),
+            3 + ipSection.length + 2,
           );
 
           statusMessage.set(
             new Uint8Array(convertInt32ToArr(clientID)),
-            3 + ipSection.length + 8,
+            3 + ipSection.length + 4,
           );
 
           this.connection.write(statusMessage);
@@ -582,7 +596,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
           const client = this.clients[clientID];
 
           const foundServer = this.proxies.find(i =>
-            !(i.clients instanceof VirtualPorts) ? i.clients[clientID] : false,
+            i.clients instanceof VirtualPorts ? false : i.clients[clientID],
           );
 
           if (!client || !client.sock || !foundServer) {
@@ -602,7 +616,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
         case RequestTypes.TCP_MESSAGE: {
           const clientID = convertToInt32(await this.readBytes(4));
-          const packetLen = convertToInt32(await this.readBytes(4));
+          const packetLen = convertToInt16(await this.readBytes(2));
           const packet = await this.readBytes(packetLen);
 
           const client = this.clients[clientID];
@@ -633,10 +647,10 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
           const ip = parseIPSection(ipSection);
 
-          const clientPort = convertToInt32(await this.readBytes(4));
-          const destPort = convertToInt32(await this.readBytes(4));
+          const clientPort = convertToInt16(await this.readBytes(2));
+          const destPort = convertToInt16(await this.readBytes(2));
 
-          const packetLength = convertToInt32(await this.readBytes(4));
+          const packetLength = convertToInt16(await this.readBytes(2));
           const packet = await this.readBytes(packetLength);
 
           const proxy = this.proxies.find(i => i.destPort == destPort);
@@ -647,7 +661,6 @@ export class SSHPyBackendProvider implements BackendBaseClass {
 
           proxy.clients.send(ip, clientPort, packet);
 
-          // TODO
           break;
         }
       }
@@ -834,31 +847,31 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       protocol == "tcp"
         ? RequestTypes.TCP_INITIATE_FORWARD_RULE
         : RequestTypes.UDP_INITIATE_FORWARD_RULE;
-    
-    const reqDestPort = convertInt32ToArr(destPort);
 
-    const connAddRequest = new Uint8Array(5);
+    const reqDestPort = convertInt16ToArr(destPort);
+
+    const connAddRequest = new Uint8Array(3);
     connAddRequest[0] = reqProtocol;
     connAddRequest.set(reqDestPort, 1);
 
     if (protocol == "udp" && proxy.clients instanceof VirtualPorts) {
       proxy.clients.setOutput((message, ip, port) => {
         const encodedIP = makeIPSection(ip);
-        const encodedPort = convertInt32ToArr(port);
+        const encodedPort = convertInt16ToArr(port);
 
-        const messageSize = convertInt32ToArr(message.length);
+        const messageSize = convertInt16ToArr(message.length);
 
         const messageToSend = new Uint8Array(
-          1 + 4 * 3 + encodedIP.length + message.length,
+          1 + 2 * 3 + encodedIP.length + message.length,
         );
 
         messageToSend[0] = RequestTypes.UDP_MESSAGE;
 
         messageToSend.set(encodedIP, 1);
         messageToSend.set(encodedPort, 1 + encodedIP.length);
-        messageToSend.set(reqDestPort, 1 + encodedIP.length + 4 * 1);
-        messageToSend.set(messageSize, 1 + encodedIP.length + 4 * 2);
-        messageToSend.set(message, 1 + encodedIP.length + 4 * 3);
+        messageToSend.set(reqDestPort, 1 + encodedIP.length + 2 * 1);
+        messageToSend.set(messageSize, 1 + encodedIP.length + 2 * 2);
+        messageToSend.set(message, 1 + encodedIP.length + 2 * 3);
 
         this.connection.write(messageToSend);
       });
@@ -886,12 +899,9 @@ export class SSHPyBackendProvider implements BackendBaseClass {
       protocol == "tcp"
         ? RequestTypes.TCP_CLOSE_FORWARD_RULE
         : RequestTypes.UDP_CLOSE_FORWARD_RULE;
-      
-    const reqDestPort = convertInt32ToArr(destPort);
 
-    const connRemoveRequest = new Uint8Array(
-      1 + reqDestPort.length,
-    );
+    const reqDestPort = convertInt16ToArr(destPort);
+    const connRemoveRequest = new Uint8Array(1 + reqDestPort.length);
 
     connRemoveRequest[0] = reqProtocol;
     connRemoveRequest.set(reqDestPort, 1);
@@ -899,7 +909,7 @@ export class SSHPyBackendProvider implements BackendBaseClass {
     this.connection.write(connRemoveRequest);
 
     if (protocol == "tcp") {
-      const clients: Record<number, Socket> = proxy.clients as Record<number, Socket>;
+      const clients = proxy.clients as Record<number, Socket>;
 
       for (const connectionID of Object.keys(clients)) {
         clients[parseInt(connectionID)].end();

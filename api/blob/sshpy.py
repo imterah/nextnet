@@ -88,6 +88,18 @@ def convert_int32_to_arr(num: int) -> List[int]:
     num & 0xff
   ]
 
+def convert_to_int16(arr: List[int]) -> int:
+  return (arr[0] << 8) | arr[1]
+
+def convert_int16_to_arr(num: int) -> List[int]:
+  return [
+    (num >> 8) & 0xff,
+    num & 0xff
+  ]
+
+# Lazy, and it works.
+max_tcp_sock_count = convert_to_int32([255, 255, 255, 255])
+
 class RequestTypes(Enum):
   # Only on the server
   TCP_INITIATE_CONNECTION = 5
@@ -151,12 +163,12 @@ class RequestHandler(socketserver.BaseRequestHandler):
     client_id = self.tcp_current_client_id
     client_id_calc_wraparounds = 0
 
-    if client_id > 65535:
+    if client_id > max_tcp_sock_count:
       client_id = 0
 
-    # Should never occur unless clients reach 65535, and then overflow 
+    # Should never occur unless total clients reach the 32 bit integer limit, and then overflow
     while client_id in self.tcp_sockets:
-      if client_id + 1 > 65535:
+      if client_id + 1 > max_tcp_sock_count:
         client_id = 0
         client_id_calc_wraparounds += 1
     
@@ -171,8 +183,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
     server_ip, server_port = sock_server.request.getsockname()
 
     client_wrapped_ip = make_ip_section(client_ip)
-    client_wrapped_port = convert_int32_to_arr(client_port)
-    server_wrapped_port = convert_int32_to_arr(server_port)
+    client_wrapped_port = convert_int16_to_arr(client_port)
+    server_wrapped_port = convert_int16_to_arr(server_port)
 
     wrapped_client_id = convert_int32_to_arr(client_id)
 
@@ -190,7 +202,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
           if len(data) == 0:
             continue
 
-          encoded_length = convert_int32_to_arr(len(data))
+          encoded_length = convert_int16_to_arr(len(data))
           self.request.sendall(bytes([RequestTypes.TCP_MESSAGE.value] + wrapped_client_id + encoded_length) + data)
       except (ConnectionResetError, BrokenPipeError, OSError):
         self.request.sendall(bytes([RequestTypes.TCP_CLOSE_CONNECTION.value] + wrapped_client_id))
@@ -202,12 +214,12 @@ class RequestHandler(socketserver.BaseRequestHandler):
     server_ip, server_port = sock_server.request[1].getsockname()
 
     client_wrapped_ip = make_ip_section(client_ip)
-    client_wrapped_port = convert_int32_to_arr(client_port)
-    server_wrapped_port = convert_int32_to_arr(server_port)
+    client_wrapped_port = convert_int16_to_arr(client_port)
+    server_wrapped_port = convert_int16_to_arr(server_port)
 
     data = sock_server.request[0]
 
-    encoded_length = convert_int32_to_arr(len(data))
+    encoded_length = convert_int16_to_arr(len(data))
     self.request.sendall(bytes([RequestTypes.UDP_MESSAGE.value]) + client_wrapped_ip + bytes(client_wrapped_port + server_wrapped_port + encoded_length) + data)
 
   def handle(self):
@@ -215,8 +227,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
       original_identifier = self.read(1)
 
       if original_identifier[0] == RequestTypes.TCP_INITIATE_FORWARD_RULE.value:
-        port_raw_byte = self.read(4)
-        port = convert_to_int32(port_raw_byte)
+        port_raw_byte = self.read(2)
+        port = convert_to_int16(port_raw_byte)
 
         tcp_class = generate_forward_rule_class(self.on_tcp_callback)
 
@@ -236,8 +248,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.TCP_CLOSE_FORWARD_RULE.value:
-        port_raw_bytes = self.read(4)
-        port = convert_to_int32(port_raw_bytes)
+        port_raw_bytes = self.read(2)
+        port = convert_to_int16(port_raw_bytes)
 
         if not port in self.tcp_servers:
           continue
@@ -249,8 +261,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.UDP_INITIATE_FORWARD_RULE.value:
-        port_raw_byte = self.read(4)
-        port = convert_to_int32(port_raw_byte)
+        port_raw_byte = self.read(2)
+        port = convert_to_int16(port_raw_byte)
 
         udp_class = generate_forward_rule_class(self.on_udp_callback)
 
@@ -270,8 +282,8 @@ class RequestHandler(socketserver.BaseRequestHandler):
 
         self.request.sendall(bytes([RequestTypes.STATUS.value, StatusTypes.SUCCESS.value]) + original_identifier + port_raw_byte)
       elif original_identifier[0] == RequestTypes.UDP_CLOSE_FORWARD_RULE.value:
-        port_raw_bytes = self.read(4)
-        port = convert_to_int32(port_raw_bytes)
+        port_raw_bytes = self.read(2)
+        port = convert_to_int16(port_raw_bytes)
 
         if not port in self.udp_servers:
           continue
@@ -285,7 +297,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
       elif original_identifier[0] == RequestTypes.TCP_MESSAGE.value:
         original_client_id = self.read(4)
         client_id = convert_to_int32(original_client_id)
-        packet_len = convert_to_int32(self.read(4))
+        packet_len = convert_to_int16(self.read(2))
 
         packet = self.read(packet_len)
 
@@ -311,10 +323,10 @@ class RequestHandler(socketserver.BaseRequestHandler):
         ip_section = ip_ver + ip_segment
         ip = parse_ip_section(ip_section)
 
-        port = convert_to_int32(self.read(4))
+        port = convert_to_int16(self.read(2))
         
-        server_port = convert_to_int32(self.read(4))
-        packet_len = convert_to_int32(self.read(4))
+        server_port = convert_to_int16(self.read(2))
+        packet_len = convert_to_int16(self.read(2))
         packet = self.read(packet_len)
 
         if not server_port in self.udp_servers:
@@ -353,7 +365,7 @@ class RequestHandler(socketserver.BaseRequestHandler):
           elif ip_type[0] == 6:
             self.read(16)
 
-          self.read(8)
+          self.read(4)
 
           client_id = convert_to_int32(self.read(4))
 
