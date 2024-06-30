@@ -38,6 +38,6 @@
 
 <h2 align="center">Troubleshooting</h2>
 
-* I'm using the SSH tunneling, and I can't reach any of the tunnels publicly.
+* I'm using SSH-based tunneling, and I can't reach any of the tunnels publicly, but can reach them on the SSH server.
 
   - Be sure to enable GatewayPorts in your sshd config (in `/etc/ssh/sshd_config` on most systems). Also, be sure to check your firewall rules on your system and your network.
