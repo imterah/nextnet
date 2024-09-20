@@ -8,6 +8,13 @@ import type {
   ParameterReturnedValue,
 } from "./base.js";
 
+import {
+  TcpConnectionDetails,
+  AcceptConnection,
+  ClientChannel,
+  RejectConnection,
+} from "ssh2";
+
 type ForwardRuleExt = ForwardRule & {
   enabled: boolean;
 };
@@ -19,6 +26,8 @@ type BackendParsedProviderString = {
 
   username: string;
   privateKey: string;
+
+  listenOnIPs: string[];
 };
 
 function parseBackendProviderString(data: string): BackendParsedProviderString {
@@ -46,12 +55,22 @@ function parseBackendProviderString(data: string): BackendParsedProviderString {
     throw new Error("Private key is not a string");
   }
 
+  let listenOnIPs: string[] = [];
+
+  if (!Array.isArray(jsonData.listenOnIPs)) {
+    listenOnIPs.push("0.0.0.0");
+  } else {
+    listenOnIPs = jsonData.listenOnIPs;
+  }
+
   return {
     ip: jsonData.ip,
     port: jsonData.port,
 
     username: jsonData.username,
     privateKey: jsonData.privateKey,
+
+    listenOnIPs,
   };
 }
 
@@ -121,6 +140,7 @@ export class SSHBackendProvider implements BackendBaseClass {
 
         for (const proxy of proxies) {
           if (!proxy.enabled) continue;
+
           this.addConnection(
             proxy.sourceIP,
             proxy.sourcePort,
@@ -178,59 +198,61 @@ export class SSHBackendProvider implements BackendBaseClass {
 
     if (foundProxyEntry) return;
 
-    (async () => {
-      await this.sshInstance.forwardIn(
-        "0.0.0.0",
-        destPort,
-        (info, accept, reject) => {
-          const foundProxyEntry = this.proxies.find(
-            i =>
-              i.sourceIP == sourceIP &&
-              i.sourcePort == sourcePort &&
-              i.destPort == destPort,
-          );
-
-          if (!foundProxyEntry || !foundProxyEntry.enabled) return reject();
-
-          const client: ConnectedClient = {
-            ip: info.srcIP,
-            port: info.srcPort,
-
-            connectionDetails: foundProxyEntry,
-          };
-
-          this.clients.push(client);
-
-          const srcConn = new Socket();
-
-          srcConn.connect({
-            host: sourceIP,
-            port: sourcePort,
-          });
-
-          // Why is this so confusing
-          const destConn = accept();
-
-          destConn.addListener("data", (chunk: Uint8Array) => {
-            srcConn.write(chunk);
-          });
-
-          destConn.addListener("end", () => {
-            this.clients.splice(this.clients.indexOf(client), 1);
-            srcConn.end();
-          });
-
-          srcConn.on("data", data => {
-            destConn.write(data);
-          });
-
-          srcConn.on("end", () => {
-            this.clients.splice(this.clients.indexOf(client), 1);
-            destConn.end();
-          });
-        },
+    const connCallback = (
+      info: TcpConnectionDetails,
+      accept: AcceptConnection<ClientChannel>,
+      reject: RejectConnection,
+    ) => {
+      const foundProxyEntry = this.proxies.find(
+        i =>
+          i.sourceIP == sourceIP &&
+          i.sourcePort == sourcePort &&
+          i.destPort == destPort,
       );
-    })();
+
+      if (!foundProxyEntry || !foundProxyEntry.enabled) return reject();
+
+      const client: ConnectedClient = {
+        ip: info.srcIP,
+        port: info.srcPort,
+
+        connectionDetails: foundProxyEntry,
+      };
+
+      this.clients.push(client);
+
+      const srcConn = new Socket();
+
+      srcConn.connect({
+        host: sourceIP,
+        port: sourcePort,
+      });
+
+      // Why is this so confusing
+      const destConn = accept();
+
+      destConn.addListener("data", (chunk: Uint8Array) => {
+        srcConn.write(chunk);
+      });
+
+      destConn.addListener("end", () => {
+        this.clients.splice(this.clients.indexOf(client), 1);
+        srcConn.end();
+      });
+
+      srcConn.on("data", data => {
+        destConn.write(data);
+      });
+
+      srcConn.on("end", () => {
+        this.clients.splice(this.clients.indexOf(client), 1);
+        destConn.end();
+      });
+    };
+
+    for (const ip of this.options.listenOnIPs) {
+      this.sshInstance.forwardIn(ip, destPort, connCallback);
+    }
 
     this.proxies.push({
       sourceIP,
