@@ -1,29 +1,44 @@
 # Changelog
 
-## [v1.0.1](https://github.com/greysoh/nextnet/tree/v1.0.1) (2024-05-18)
+## [v1.1.0](https://github.com/imterah/nextnet/tree/v1.1.0) (2024-09-20)
+
+**Fixed bugs:**
+
+- Desktop app fails to build on macOS w/ `nix-shell` [\#1](https://github.com/imterah/nextnet/issues/1)
 
 **Merged pull requests:**
 
-- Adds public key authentication [\#6](https://github.com/greysoh/nextnet/pull/6)
-- Add support for eslint [\#5](https://github.com/greysoh/nextnet/pull/5)
+- chore\(deps\): bump find-my-way from 8.1.0 to 8.2.2 in /api [\#17](https://github.com/imterah/nextnet/pull/17)
+- chore\(deps\): bump axios from 1.6.8 to 1.7.4 in /lom [\#16](https://github.com/imterah/nextnet/pull/16)
+- chore\(deps\): bump micromatch from 4.0.5 to 4.0.8 in /lom [\#15](https://github.com/imterah/nextnet/pull/15)
+- chore\(deps\): bump braces from 3.0.2 to 3.0.3 in /lom [\#13](https://github.com/imterah/nextnet/pull/13)
+- chore\(deps-dev\): bump braces from 3.0.2 to 3.0.3 in /api [\#11](https://github.com/imterah/nextnet/pull/11)
+- chore\(deps\): bump ws from 8.17.0 to 8.17.1 in /api [\#10](https://github.com/imterah/nextnet/pull/10)
 
-## [v1.0.0](https://github.com/greysoh/nextnet/tree/v1.0.0) (2024-05-10)
+## [v1.0.1](https://github.com/imterah/nextnet/tree/v1.0.1) (2024-05-18)
 
-## [v0.1.1](https://github.com/greysoh/nextnet/tree/v0.1.1) (2024-05-05)
+**Merged pull requests:**
 
-## [v0.1.0](https://github.com/greysoh/nextnet/tree/v0.1.0) (2024-05-05)
+- Adds public key authentication [\#6](https://github.com/imterah/nextnet/pull/6)
+- Add support for eslint [\#5](https://github.com/imterah/nextnet/pull/5)
+
+## [v1.0.0](https://github.com/imterah/nextnet/tree/v1.0.0) (2024-05-10)
+
+## [v0.1.1](https://github.com/imterah/nextnet/tree/v0.1.1) (2024-05-05)
+
+## [v0.1.0](https://github.com/imterah/nextnet/tree/v0.1.0) (2024-05-05)
 
 **Implemented enhancements:**
 
-- \(potentially\) Migrate nix shell to nix flake [\#2](https://github.com/greysoh/nextnet/issues/2)
+- \(potentially\) Migrate nix shell to nix flake [\#2](https://github.com/imterah/nextnet/issues/2)
 
 **Closed issues:**
 
-- add precommit hooks [\#3](https://github.com/greysoh/nextnet/issues/3)
+- add precommit hooks [\#3](https://github.com/imterah/nextnet/issues/3)
 
 **Merged pull requests:**
 
-- Reimplements PassyFire as a possible backend [\#4](https://github.com/greysoh/nextnet/pull/4)
+- Reimplements PassyFire as a possible backend [\#4](https://github.com/imterah/nextnet/pull/4)
 
 
 
