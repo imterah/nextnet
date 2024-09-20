@@ -1,6 +1,6 @@
 {
   "name": "nextnet",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Yet another dashboard to manage portforwarding technologies",
   "main": "index.js",
   "type": "module",
