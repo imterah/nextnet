@@ -2,8 +2,8 @@ import { format } from "node:util";
 
 import type { PrismaClient } from "@prisma/client";
 
-import type { BackendBaseClass } from "../backendimpl/base.js";
 import { backendProviders } from "../backendimpl/index.js";
+import { BackendBaseClass } from "../backendimpl/base.js";
 
 type Backend = {
   id: number;
@@ -30,6 +30,16 @@ export async function backendInit(
 
   if (!ourProvider) {
     error(" - Error: Invalid backend recieved!");
+
+    // Prevent crashes when we don't recieve a backend
+    backends[backend.id] = new BackendBaseClass("");
+
+    backends[backend.id].logs.push("** Failed To Create Backend **");
+
+    backends[backend.id].logs.push(
+      "Reason: Invalid backend recieved (couldn't find the backend to use!)",
+    );
+
     return false;
   }
 
