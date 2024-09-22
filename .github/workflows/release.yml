@@ -83,7 +83,7 @@ jobs:
           files: |
             LICENSE
             docker-compose.yml
-          repository: greysoh/nextnet
+          repository: imterah/nextnet
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.get_version.outputs.version }}
 
@@ -96,14 +96,14 @@ jobs:
 
       - name: Build all docker images
         run: |
-          docker build ./api --tag ghcr.io/greysoh/nextnet:$(cat VERSION)
-          docker build ./lom --tag ghcr.io/greysoh/nextnet-lom:$(cat VERSION)
+          docker build ./api --tag ghcr.io/imterah/nextnet:$(cat VERSION)
+          docker build ./lom --tag ghcr.io/imterah/nextnet-lom:$(cat VERSION)
 
       - name: Publish all docker images
         run: |
-          docker tag ghcr.io/greysoh/nextnet:$(cat VERSION) ghcr.io/greysoh/nextnet:latest
-          docker push ghcr.io/greysoh/nextnet:$(cat VERSION)
-          docker push ghcr.io/greysoh/nextnet:latest
+          docker tag ghcr.io/imterah/nextnet:$(cat VERSION) ghcr.io/imterah/nextnet:latest
+          docker push ghcr.io/imterah/nextnet:$(cat VERSION)
+          docker push ghcr.io/imterah/nextnet:latest
 
           docker tag ghcr.io/greysoh/nextnet-lom:$(cat VERSION) ghcr.io/greysoh/nextnet-lom:latest
           docker push ghcr.io/greysoh/nextnet-lom:$(cat VERSION)
