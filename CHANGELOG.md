@@ -2,8 +2,6 @@
 
 ## [v1.1.0](https://github.com/imterah/nextnet/tree/v1.1.0) (2024-09-22)
 
-## [v1.1.1](https://github.com/imterah/nextnet/tree/v1.1.1) (2024-09-22)
-
 **Fixed bugs:**
 
 - Desktop app fails to build on macOS w/ `nix-shell` [\#1](https://github.com/imterah/nextnet/issues/1)
