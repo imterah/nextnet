@@ -1,6 +1,8 @@
 # Changelog
 
-## [v1.1.1](https://github.com/imterah/nextnet/tree/v1.1.1) (2024-09-20)
+## [v1.1.0](https://github.com/imterah/nextnet/tree/v1.1.0) (2024-09-22)
+
+## [v1.1.1](https://github.com/imterah/nextnet/tree/v1.1.1) (2024-09-22)
 
 **Fixed bugs:**
 
