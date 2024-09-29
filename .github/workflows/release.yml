@@ -105,6 +105,6 @@ jobs:
           docker push ghcr.io/imterah/nextnet:$(cat VERSION)
           docker push ghcr.io/imterah/nextnet:latest
 
-          docker tag ghcr.io/imterah/nextnet-lom:$(cat VERSION) ghcr.io/greysoh/nextnet-lom:latest
+          docker tag ghcr.io/imterah/nextnet-lom:$(cat VERSION) ghcr.io/imterah/nextnet-lom:latest
           docker push ghcr.io/imterah/nextnet-lom:$(cat VERSION)
           docker push ghcr.io/imterah/nextnet-lom:latest
