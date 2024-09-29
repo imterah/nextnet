@@ -1,6 +1,6 @@
 {
   "name": "nextnet-lom",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Lights Out Management, NextNet style",
   "main": "index.js",
   "type": "module",
