@@ -1,5 +1,8 @@
 #!/bin/bash
 export NODE_ENV="production"
-export SERVER_BASE_URL="http://nextnet-api:3000/"
+
+if [[ "$SERVER_BASE_URL" == "" ]]; then
+  export SERVER_BASE_URL="http://nextnet-api:3000/"
+fi
 
 npm start
