@@ -9,6 +9,28 @@
 
 **NextNet is a dashboard to manage portforwarding technologies.**
 
+<h2 align="center">⚠️ Deprecation Warning ⚠️</h2>
+
+NextNet in its current state is going to be deprecated and slowly rewritten into Go, with a more modular approach that's
+similar to Tor's modular pluggable transports system.
+
+**What will change for end users?** There will be an export feature added to the legacy codebase, and an import feature 
+for the new codebase. You will need to upgrade to intermediate versions that allow for this. After this one-time process
+is done, you won't have to run it ever again.
+
+This will also lead for performance benefits (hopefully). The flagship backend for now is SSH. The implementation for that
+is node-ssh, which... isn't the fastest thing ever, since it reimplements the SSH protocol in pure JS.
+
+**What will change for developers?** The LOM and API will be rewritten in Go slowly. See issue [#1](https://git.greysoh.dev/imterah/nextnet/issues/1) on my Git server as a tracking issue for this. Except for new Go code and migration code, this project is
+on a feature freeze effective *immediately*.
+
+The code for this is on branch `dev`, like usual. However, this warning and all the old code is on the `legacy` branch,
+which is currently the default branch. If you're a developer, be careful and make sure you're commiting to the right branch,
+*especially* if you've just cloned the code.
+
+Additionally, the Git server has moved from `https://github.com/imterah/nextnet.git` to 
+`https://git.greysoh.dev/imterah/nextnet.git`. Be sure to update your remotes. All PRs and issues on GitHub *will* be ignored.
+
 <h2 align="center">Local Development</h2>
 
 > [!NOTE]
