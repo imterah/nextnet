@@ -12,11 +12,13 @@
 <h2 align="center">Local Development</h2>
 
 > [!NOTE]
-> Using [nix](https://builtwithnix.org) is recommended. If you're not using Nix, install PostgreSQL, Node.JS, and `lsof`.
+> Using [nix](https://builtwithnix.org) is recommended. If you're not using Nix, install the Go language & language server (`go` & `gopls`), Node.JS, and `lsof`.
 
-1. First, check if you have a working Nix environment if you're using Nix.
+1. First, make sure you have a sane copy of Docker installed, and make sure the copy of Docker works.
 
-2. Run `nix-shell`, or alternatively `source init.sh` if you're not using Nix.
+2. Secondly, check if you have a working Nix environment if you're using Nix.
+
+3. Lastly, Run `nix-shell`, or alternatively `source init.sh` if you're not using Nix.
 
 <h3 align="center">API Development</h3>
 
@@ -26,14 +28,14 @@
 
 <h2 align="center">Production Deployment</h2>
 
-> [!WARNING]  
+> [!WARNING]
 > Deploying using docker compose is the only officially supported deployment method. Here be dragons!
 
 1. Copy and change the default password (or username & db name too) from the template file `prod-docker.env`:
    ```bash
    sed "s/POSTGRES_PASSWORD=nextnet/POSTGRES_PASSWORD=$(head -c 500 /dev/random | sha512sum | cut -d " " -f 1)/g" prod-docker.env > .env
    ```
-  
+
 2. Build the docker stack: `docker compose --env-file .env up -d`
 
 <h2 align="center">Troubleshooting</h2>
