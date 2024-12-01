@@ -24,7 +24,7 @@ services:
       - ssh_key_data:/app/keys
 
   db:
-    image: postgres:15.4
+    image: postgres:17.2
     container_name: nextnet-postgres
     restart: unless-stopped
     environment:

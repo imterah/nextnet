@@ -1,4 +1,4 @@
-FROM node:20.11.1-bookworm
+FROM node:22.11.0-bookworm
 LABEL org.opencontainers.image.source="https://github.com/greysoh/nextnet"
 WORKDIR /app/
 COPY src /app/src
