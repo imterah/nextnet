@@ -19,6 +19,10 @@ func (writer WriteLogger) Write(p []byte) (n int, err error) {
 	logSplit := strings.Split(string(p), "\n")
 
 	for _, line := range logSplit {
+		if line == "" {
+			continue
+		}
+
 		if writer.UseError {
 			log.Errorf("application: %s", line)
 		} else {

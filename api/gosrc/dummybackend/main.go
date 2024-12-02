@@ -19,16 +19,16 @@ func (backend *DummyBackend) StopBackend() (bool, error) {
 	return true, nil
 }
 
-func (backend *DummyBackend) StartProxy(command *commonbackend.AddConnectionCommand) (bool, error) {
+func (backend *DummyBackend) StartProxy(command *commonbackend.AddProxy) (bool, error) {
 	return true, nil
 }
 
-func (backend *DummyBackend) StopProxy(command *commonbackend.RemoveConnectionCommand) (bool, error) {
+func (backend *DummyBackend) StopProxy(command *commonbackend.RemoveProxy) (bool, error) {
 	return true, nil
 }
 
-func (backend *DummyBackend) GetAllClientConnections() []*commonbackend.ClientConnection {
-	return []*commonbackend.ClientConnection{}
+func (backend *DummyBackend) GetAllClientConnections() []*commonbackend.ProxyClientConnection {
+	return []*commonbackend.ProxyClientConnection{}
 }
 
 func (backend *DummyBackend) CheckParametersForConnections(clientParameters *commonbackend.CheckClientParameters) *commonbackend.CheckParametersResponse {

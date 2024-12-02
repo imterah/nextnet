@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-func unmarshalIndividualConnectionStruct(conn io.Reader) (*ClientConnection, error) {
+func unmarshalIndividualConnectionStruct(conn io.Reader) (*ProxyClientConnection, error) {
 	serverIPVersion := make([]byte, 1)
 
 	if _, err := conn.Read(serverIPVersion); err != nil {
@@ -70,7 +70,7 @@ func unmarshalIndividualConnectionStruct(conn io.Reader) (*ClientConnection, err
 		return nil, fmt.Errorf("couldn't read source port")
 	}
 
-	return &ClientConnection{
+	return &ProxyClientConnection{
 		SourceIP:   serverIP.String(),
 		SourcePort: binary.BigEndian.Uint16(sourcePort),
 		DestPort:   binary.BigEndian.Uint16(destinationPort),
@@ -79,7 +79,7 @@ func unmarshalIndividualConnectionStruct(conn io.Reader) (*ClientConnection, err
 	}, nil
 }
 
-func unmarshalIndividualProxyStruct(conn io.Reader) (*ProxyConnection, error) {
+func unmarshalIndividualProxyStruct(conn io.Reader) (*ProxyInstance, error) {
 	ipVersion := make([]byte, 1)
 
 	if _, err := conn.Read(ipVersion); err != nil {
@@ -130,7 +130,7 @@ func unmarshalIndividualProxyStruct(conn io.Reader) (*ProxyConnection, error) {
 		return nil, fmt.Errorf("invalid protocol")
 	}
 
-	return &ProxyConnection{
+	return &ProxyInstance{
 		SourceIP:   ip.String(),
 		SourcePort: binary.BigEndian.Uint16(sourcePort),
 		DestPort:   binary.BigEndian.Uint16(destPort),
@@ -146,7 +146,7 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 	}
 
 	switch commandType[0] {
-	case StartCommandID:
+	case StartID:
 		argumentsLength := make([]byte, 2)
 
 		if _, err := conn.Read(argumentsLength); err != nil {
@@ -159,15 +159,15 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			return "", nil, fmt.Errorf("couldn't read arguments")
 		}
 
-		return "start", &StartCommand{
+		return "start", &Start{
 			Type:      "start",
 			Arguments: arguments,
 		}, nil
-	case StopCommandID:
-		return "stop", &StopCommand{
+	case StopID:
+		return "stop", &Stop{
 			Type: "stop",
 		}, nil
-	case AddConnectionCommandID:
+	case AddProxyID:
 		ipVersion := make([]byte, 1)
 
 		if _, err := conn.Read(ipVersion); err != nil {
@@ -218,14 +218,14 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			return "", nil, fmt.Errorf("invalid protocol")
 		}
 
-		return "addConnection", &AddConnectionCommand{
-			Type:       "addConnection",
+		return "addProxy", &AddProxy{
+			Type:       "addProxy",
 			SourceIP:   ip.String(),
 			SourcePort: binary.BigEndian.Uint16(sourcePort),
 			DestPort:   binary.BigEndian.Uint16(destPort),
 			Protocol:   protocol,
 		}, nil
-	case RemoveConnectionCommandID:
+	case RemoveProxyID:
 		ipVersion := make([]byte, 1)
 
 		if _, err := conn.Read(ipVersion); err != nil {
@@ -276,15 +276,15 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			return "", nil, fmt.Errorf("invalid protocol")
 		}
 
-		return "removeConnection", &RemoveConnectionCommand{
-			Type:       "removeConnection",
+		return "removeProxy", &RemoveProxy{
+			Type:       "removeProxy",
 			SourceIP:   ip.String(),
 			SourcePort: binary.BigEndian.Uint16(sourcePort),
 			DestPort:   binary.BigEndian.Uint16(destPort),
 			Protocol:   protocol,
 		}, nil
-	case GetAllConnectionsID:
-		connections := []*ClientConnection{}
+	case ProxyConnectionsResponseID:
+		connections := []*ProxyClientConnection{}
 		delimiter := make([]byte, 1)
 		var errorReturn error
 
@@ -313,8 +313,8 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			}
 		}
 
-		return "connectionsResponse", &ConnectionsResponse{
-			Type:        "connectionsResponse",
+		return "proxyConnectionsResponse", &ProxyConnectionsResponse{
+			Type:        "proxyConnectionsResponse",
 			Connections: connections,
 		}, errorReturn
 	case CheckClientParametersID:
@@ -605,12 +605,12 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			Protocol:   protocol,
 			IsActive:   isActive[0] == 1,
 		}, nil
-	case ProxyConnectionRequestID:
-		return "proxyConnectionRequest", &ProxyConnectionRequest{
-			Type: "proxyConnectionRequest",
+	case ProxyInstanceRequestID:
+		return "proxyInstanceRequest", &ProxyInstanceRequest{
+			Type: "proxyInstanceRequest",
 		}, nil
-	case ProxyConnectionResponseID:
-		proxies := []*ProxyConnection{}
+	case ProxyInstanceResponseID:
+		proxies := []*ProxyInstance{}
 		delimiter := make([]byte, 1)
 		var errorReturn error
 
@@ -639,15 +639,15 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			}
 		}
 
-		return "proxyConnectionResponse", &ProxyConnectionResponse{
-			Type:    "proxyConnectionResponse",
+		return "proxyInstanceResponse", &ProxyInstanceResponse{
+			Type:    "proxyInstanceResponse",
 			Proxies: proxies,
 		}, errorReturn
-	case GetAllConnectionsRequestID:
-		return "getAllConnectionsRequest", &GetAllConnectionsRequest{
-			Type: "getAllConnectionsRequest",
+	case ProxyConnectionsRequestID:
+		return "proxyConnectionsRequest", &ProxyConnectionsRequest{
+			Type: "proxyConnectionsRequest",
 		}, nil
 	}
 
-	return "", nil, fmt.Errorf("couldn't match command")
+	return "", nil, fmt.Errorf("couldn't match command ID")
 }

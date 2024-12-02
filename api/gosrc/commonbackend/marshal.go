@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-func marshalIndividualConnectionStruct(conn *ClientConnection) []byte {
+func marshalIndividualConnectionStruct(conn *ProxyClientConnection) []byte {
 	sourceIPOriginal := net.ParseIP(conn.SourceIP)
 	clientIPOriginal := net.ParseIP(conn.ClientIP)
 
@@ -47,7 +47,7 @@ func marshalIndividualConnectionStruct(conn *ClientConnection) []byte {
 	return connectionBlock
 }
 
-func marshalIndividualProxyStruct(conn *ProxyConnection) ([]byte, error) {
+func marshalIndividualProxyStruct(conn *ProxyInstance) ([]byte, error) {
 	sourceIPOriginal := net.ParseIP(conn.SourceIP)
 
 	var sourceIPVer uint8
@@ -87,28 +87,28 @@ func marshalIndividualProxyStruct(conn *ProxyConnection) ([]byte, error) {
 func Marshal(commandType string, command interface{}) ([]byte, error) {
 	switch commandType {
 	case "start":
-		startCommand, ok := command.(*StartCommand)
+		startCommand, ok := command.(*Start)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
 		}
 
 		startCommandBytes := make([]byte, 1+2+len(startCommand.Arguments))
-		startCommandBytes[0] = StartCommandID
+		startCommandBytes[0] = StartID
 		binary.BigEndian.PutUint16(startCommandBytes[1:3], uint16(len(startCommand.Arguments)))
 		copy(startCommandBytes[3:], startCommand.Arguments)
 
 		return startCommandBytes, nil
 	case "stop":
-		_, ok := command.(*StopCommand)
+		_, ok := command.(*Stop)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
 		}
 
-		return []byte{StopCommandID}, nil
-	case "addConnection":
-		addConnectionCommand, ok := command.(*AddConnectionCommand)
+		return []byte{StopID}, nil
+	case "addProxy":
+		addConnectionCommand, ok := command.(*AddProxy)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
@@ -129,7 +129,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 
 		addConnectionBytes := make([]byte, 1+1+len(ipBytes)+2+2+1)
 
-		addConnectionBytes[0] = AddConnectionCommandID
+		addConnectionBytes[0] = AddProxyID
 		addConnectionBytes[1] = ipVer
 
 		copy(addConnectionBytes[2:2+len(ipBytes)], ipBytes)
@@ -150,8 +150,8 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		addConnectionBytes[6+len(ipBytes)] = protocol
 
 		return addConnectionBytes, nil
-	case "removeConnection":
-		removeConnectionCommand, ok := command.(*RemoveConnectionCommand)
+	case "removeProxy":
+		removeConnectionCommand, ok := command.(*RemoveProxy)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
@@ -172,7 +172,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 
 		removeConnectionBytes := make([]byte, 1+1+len(ipBytes)+2+2+1)
 
-		removeConnectionBytes[0] = RemoveConnectionCommandID
+		removeConnectionBytes[0] = RemoveProxyID
 		removeConnectionBytes[1] = ipVer
 		copy(removeConnectionBytes[2:2+len(ipBytes)], ipBytes)
 		binary.BigEndian.PutUint16(removeConnectionBytes[2+len(ipBytes):4+len(ipBytes)], removeConnectionCommand.SourcePort)
@@ -191,8 +191,8 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		removeConnectionBytes[6+len(ipBytes)] = protocol
 
 		return removeConnectionBytes, nil
-	case "connectionsResponse":
-		allConnectionsCommand, ok := command.(*ConnectionsResponse)
+	case "proxyConnectionsResponse":
+		allConnectionsCommand, ok := command.(*ProxyConnectionsResponse)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
@@ -207,7 +207,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		}
 
 		connectionCommandArray := make([]byte, totalSize+1)
-		connectionCommandArray[0] = GetAllConnectionsID
+		connectionCommandArray[0] = ProxyConnectionsResponseID
 
 		currentPosition := 1
 
@@ -442,8 +442,8 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		proxyStatusResponseBytes[7+len(ipBytes)] = isActive
 
 		return proxyStatusResponseBytes, nil
-	case "proxyConnectionResponse":
-		proxyConectionResponse, ok := command.(*ProxyConnectionResponse)
+	case "proxyInstanceResponse":
+		proxyConectionResponse, ok := command.(*ProxyInstanceResponse)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
@@ -464,7 +464,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		}
 
 		connectionCommandArray := make([]byte, totalSize+1)
-		connectionCommandArray[0] = ProxyConnectionResponseID
+		connectionCommandArray[0] = ProxyInstanceResponseID
 
 		currentPosition := 1
 
@@ -476,23 +476,23 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 
 		connectionCommandArray[totalSize] = '\n'
 		return connectionCommandArray, nil
-	case "proxyConnectionRequest":
-		_, ok := command.(*ProxyConnectionRequest)
+	case "proxyInstanceRequest":
+		_, ok := command.(*ProxyInstanceRequest)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
 		}
 
-		return []byte{ProxyConnectionRequestID}, nil
-	case "getAllConnectionsRequest":
-		_, ok := command.(*GetAllConnectionsRequest)
+		return []byte{ProxyInstanceRequestID}, nil
+	case "proxyConnectionsRequest":
+		_, ok := command.(*ProxyConnectionsRequest)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
 		}
 
-		return []byte{GetAllConnectionsRequestID}, nil
+		return []byte{ProxyConnectionsRequestID}, nil
 	}
 
-	return nil, fmt.Errorf("couldn't match command")
+	return nil, fmt.Errorf("couldn't match command name")
 }

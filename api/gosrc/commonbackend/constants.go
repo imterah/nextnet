@@ -3,25 +3,25 @@ package commonbackend
 // TODO (imterah): Rename AddConnectionCommand/RemoveConnectionCommand to AddProxyCommand/RemoveProxyCommand
 // and their associated function calls
 
-type StartCommand struct {
+type Start struct {
 	Type      string // Will be 'start' always
 	Arguments []byte
 }
 
-type StopCommand struct {
+type Stop struct {
 	Type string // Will be 'stop' always
 }
 
-type AddConnectionCommand struct {
-	Type       string // Will be 'addConnection' always
+type AddProxy struct {
+	Type       string // Will be 'addProxy' always
 	SourceIP   string
 	SourcePort uint16
 	DestPort   uint16
 	Protocol   string // Will be either 'tcp' or 'udp'
 }
 
-type RemoveConnectionCommand struct {
-	Type       string // Will be 'removeConnection' always
+type RemoveProxy struct {
+	Type       string // Will be 'removeProxy' always
 	SourceIP   string
 	SourcePort uint16
 	DestPort   uint16
@@ -45,25 +45,25 @@ type ProxyStatusResponse struct {
 	IsActive   bool
 }
 
-type ProxyConnection struct {
+type ProxyInstance struct {
 	SourceIP   string
 	SourcePort uint16
 	DestPort   uint16
 	Protocol   string // Will be either 'tcp' or 'udp'
 }
 
-type ProxyConnectionResponse struct {
-	Type    string             // Will be 'proxyConnectionResponse' always
-	Proxies []*ProxyConnection // List of connections
+type ProxyInstanceResponse struct {
+	Type    string           // Will be 'proxyConnectionResponse' always
+	Proxies []*ProxyInstance // List of connections
 }
 
-type ProxyConnectionRequest struct {
+type ProxyInstanceRequest struct {
 	Type string // Will be 'proxyConnectionRequest' always
 }
 
 type BackendStatusResponse struct {
 	Type       string // Will be 'backendStatusResponse' always
-	IsRunning  bool   // Can be either for 'start' or 'stop'
+	IsRunning  bool   // True if running, false if not running
 	StatusCode int    // Either the 'Success' or 'Failure' constant
 	Message    string // String message from the client (ex. failed to dial TCP)
 }
@@ -72,11 +72,12 @@ type BackendStatusRequest struct {
 	Type string // Will be 'backendStatusRequest' always
 }
 
-type GetAllConnectionsRequest struct {
-	Type string // Will be 'getAllConnectionsRequest' always
+type ProxyConnectionsRequest struct {
+	Type string // Will be 'proxyConnectionsRequest' always
 }
 
-type ClientConnection struct {
+// Client's connection to a specific proxy
+type ProxyClientConnection struct {
 	SourceIP   string
 	SourcePort uint16
 	DestPort   uint16
@@ -84,9 +85,9 @@ type ClientConnection struct {
 	ClientPort uint16
 }
 
-type ConnectionsResponse struct {
-	Type        string              // Will be 'connectionsResponse' always
-	Connections []*ClientConnection // List of connections
+type ProxyConnectionsResponse struct {
+	Type        string                   // Will be 'proxyConnectionsResponse' always
+	Connections []*ProxyClientConnection // List of connections
 }
 
 type CheckClientParameters struct {
@@ -111,22 +112,21 @@ type CheckParametersResponse struct {
 }
 
 const (
-	StartCommandID = iota
-	StopCommandID
-	AddConnectionCommandID
-	RemoveConnectionCommandID
-	ClientConnectionID
-	GetAllConnectionsID
+	StartID = iota
+	StopID
+	AddProxyID
+	RemoveProxyID
+	ProxyConnectionsResponseID
 	CheckClientParametersID
 	CheckServerParametersID
 	CheckParametersResponseID
-	GetAllConnectionsRequestID
+	ProxyConnectionsRequestID
 	BackendStatusResponseID
 	BackendStatusRequestID
 	ProxyStatusRequestID
 	ProxyStatusResponseID
-	ProxyConnectionResponseID
-	ProxyConnectionRequestID
+	ProxyInstanceResponseID
+	ProxyInstanceRequestID
 )
 
 const (

@@ -26,7 +26,7 @@ type SSHListener struct {
 type SSHBackend struct {
 	config         SSHBackendData
 	conn           *ssh.Client
-	clients        []*commonbackend.ClientConnection
+	clients        []*commonbackend.ProxyClientConnection
 	proxies        []*SSHListener
 	arrayPropMutex sync.Mutex
 }
@@ -40,6 +40,7 @@ type SSHBackendData struct {
 }
 
 func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
+	log.Info("SSHBackend is initializing...")
 	var backendData SSHBackendData
 
 	err := json.Unmarshal(bytes, &backendData)
@@ -77,6 +78,7 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 
 	backend.conn = conn
 
+	log.Info("SSHBackend has initialized successfully.")
 	return true, nil
 }
 
@@ -90,7 +92,7 @@ func (backend *SSHBackend) StopBackend() (bool, error) {
 	return true, nil
 }
 
-func (backend *SSHBackend) StartProxy(command *commonbackend.AddConnectionCommand) (bool, error) {
+func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, error) {
 	listenerObject := &SSHListener{
 		SourceIP:   command.SourceIP,
 		SourcePort: command.SourcePort,
@@ -131,7 +133,7 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddConnectionComman
 					continue
 				}
 
-				sourceConn, err := net.Dial("tcp", command.SourceIP+":"+string(command.SourcePort))
+				sourceConn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", command.SourceIP, command.SourcePort))
 
 				if err != nil {
 					log.Warnf("failed to dial source connection: %s", err.Error())
@@ -146,7 +148,7 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddConnectionComman
 					continue
 				}
 
-				advertisedConn := &commonbackend.ClientConnection{
+				advertisedConn := &commonbackend.ProxyClientConnection{
 					SourceIP:   command.SourceIP,
 					SourcePort: command.SourcePort,
 					DestPort:   command.DestPort,
@@ -241,7 +243,7 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddConnectionComman
 	return true, nil
 }
 
-func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveConnectionCommand) (bool, error) {
+func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveProxy) (bool, error) {
 	defer backend.arrayPropMutex.Unlock()
 	backend.arrayPropMutex.Lock()
 
@@ -270,7 +272,7 @@ func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveConnectionComm
 	return false, fmt.Errorf("could not find the proxy")
 }
 
-func (backend *SSHBackend) GetAllClientConnections() []*commonbackend.ClientConnection {
+func (backend *SSHBackend) GetAllClientConnections() []*commonbackend.ProxyClientConnection {
 	defer backend.arrayPropMutex.Unlock()
 	backend.arrayPropMutex.Lock()
 
@@ -306,7 +308,6 @@ func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *commonba
 }
 
 func main() {
-	// When using logging, you should use charmbracelet/log, because that's what everything else uses in this ecosystem of a project. - imterah
 	logLevel := os.Getenv("NEXTNET_LOG_LEVEL")
 
 	if logLevel != "" {

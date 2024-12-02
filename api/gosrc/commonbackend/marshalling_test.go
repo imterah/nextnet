@@ -10,7 +10,7 @@ import (
 var logLevel = os.Getenv("NEXTNET_LOG_LEVEL")
 
 func TestStartCommandMarshalSupport(t *testing.T) {
-	commandInput := &StartCommand{
+	commandInput := &Start{
 		Type:      "start",
 		Arguments: []byte("Hello from automated testing"),
 	}
@@ -37,7 +37,7 @@ func TestStartCommandMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*StartCommand)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*Start)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -54,7 +54,7 @@ func TestStartCommandMarshalSupport(t *testing.T) {
 }
 
 func TestStopCommandMarshalSupport(t *testing.T) {
-	commandInput := &StopCommand{
+	commandInput := &Stop{
 		Type: "stop",
 	}
 
@@ -80,7 +80,7 @@ func TestStopCommandMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*StopCommand)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*Stop)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -93,8 +93,8 @@ func TestStopCommandMarshalSupport(t *testing.T) {
 }
 
 func TestAddConnectionCommandMarshalSupport(t *testing.T) {
-	commandInput := &AddConnectionCommand{
-		Type:       "addConnection",
+	commandInput := &AddProxy{
+		Type:       "addProxy",
 		SourceIP:   "192.168.0.139",
 		SourcePort: 19132,
 		DestPort:   19132,
@@ -123,7 +123,7 @@ func TestAddConnectionCommandMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*AddConnectionCommand)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*AddProxy)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -156,8 +156,8 @@ func TestAddConnectionCommandMarshalSupport(t *testing.T) {
 }
 
 func TestRemoveConnectionCommandMarshalSupport(t *testing.T) {
-	commandInput := &RemoveConnectionCommand{
-		Type:       "removeConnection",
+	commandInput := &RemoveProxy{
+		Type:       "removeProxy",
 		SourceIP:   "192.168.0.139",
 		SourcePort: 19132,
 		DestPort:   19132,
@@ -186,7 +186,7 @@ func TestRemoveConnectionCommandMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*RemoveConnectionCommand)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*RemoveProxy)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -219,9 +219,9 @@ func TestRemoveConnectionCommandMarshalSupport(t *testing.T) {
 }
 
 func TestGetAllConnectionsCommandMarshalSupport(t *testing.T) {
-	commandInput := &ConnectionsResponse{
-		Type: "connectionsResponse",
-		Connections: []*ClientConnection{
+	commandInput := &ProxyConnectionsResponse{
+		Type: "proxyConnectionsResponse",
+		Connections: []*ProxyClientConnection{
 			{
 				SourceIP:   "127.0.0.1",
 				SourcePort: 19132,
@@ -268,7 +268,7 @@ func TestGetAllConnectionsCommandMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ConnectionsResponse)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ProxyConnectionsResponse)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -702,8 +702,8 @@ func TestProxyStatusResponseMarshalSupport(t *testing.T) {
 }
 
 func TestProxyConnectionRequestMarshalSupport(t *testing.T) {
-	commandInput := &ProxyConnectionRequest{
-		Type: "proxyConnectionRequest",
+	commandInput := &ProxyInstanceRequest{
+		Type: "proxyInstanceRequest",
 	}
 
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
@@ -728,7 +728,7 @@ func TestProxyConnectionRequestMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ProxyConnectionRequest)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ProxyInstanceRequest)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -741,9 +741,9 @@ func TestProxyConnectionRequestMarshalSupport(t *testing.T) {
 }
 
 func TestProxyConnectionResponseMarshalSupport(t *testing.T) {
-	commandInput := &ProxyConnectionResponse{
-		Type: "proxyConnectionResponse",
-		Proxies: []*ProxyConnection{
+	commandInput := &ProxyInstanceResponse{
+		Type: "proxyInstanceResponse",
+		Proxies: []*ProxyInstance{
 			{
 				SourceIP:   "192.168.0.168",
 				SourcePort: 25565,
@@ -787,7 +787,7 @@ func TestProxyConnectionResponseMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ProxyConnectionResponse)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ProxyInstanceResponse)
 
 	if !ok {
 		t.Fatal("failed typecast")
