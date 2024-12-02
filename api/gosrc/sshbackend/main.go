@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 
 	"git.greysoh.dev/imterah/nextnet/backendutil"
 	"git.greysoh.dev/imterah/nextnet/commonbackend"
@@ -13,14 +15,24 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+type SSHListener struct {
+	SourceIP   string
+	SourcePort uint16
+	DestPort   uint16
+	Protocol   string // Will be either 'tcp' or 'udp'
+	Listeners  []net.Listener
+}
+
 type SSHBackend struct {
-	data    SSHBackendData
-	conn    ssh.Client
-	clients []*commonbackend.ClientConnection
+	config         SSHBackendData
+	conn           *ssh.Client
+	clients        []*commonbackend.ClientConnection
+	proxies        []*SSHListener
+	arrayPropMutex sync.Mutex
 }
 
 type SSHBackendData struct {
-	Ip          string   `json:"ip"`
+	IP          string   `json:"ip"`
 	Port        uint16   `json:"port"`
 	Username    string   `json:"username"`
 	PrivateKey  string   `json:"privateKey"`
@@ -30,18 +42,20 @@ type SSHBackendData struct {
 func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 	var backendData SSHBackendData
 
-	err := json.Unmarshal(bytes, &backendData) // ?????
+	err := json.Unmarshal(bytes, &backendData)
+
 	if err != nil {
 		return false, err
 	}
-	backend.data = backendData
 
-	if len(backend.data.ListenOnIPs) == 0 {
-		backend.data.ListenOnIPs = []string{"0.0.0.0"}
+	backend.config = backendData
+
+	if len(backend.config.ListenOnIPs) == 0 {
+		backend.config.ListenOnIPs = []string{"0.0.0.0"}
 	}
 
-	// create signer for privateKey
 	signer, err := ssh.ParsePrivateKey([]byte(backendData.PrivateKey))
+
 	if err != nil {
 		return false, err
 	}
@@ -55,10 +69,12 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 		},
 	}
 
-	conn, err := ssh.Dial("tcp", backendData.Ip+":"+string(backendData.Port), config)
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", backendData.IP, backendData.Port), config)
+
 	if err != nil {
 		return false, err
 	}
+
 	backend.conn = conn
 
 	return true, nil
@@ -66,6 +82,7 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 
 func (backend *SSHBackend) StopBackend() (bool, error) {
 	err := backend.conn.Close()
+
 	if err != nil {
 		return false, err
 	}
@@ -73,33 +90,113 @@ func (backend *SSHBackend) StopBackend() (bool, error) {
 	return true, nil
 }
 
-func (backend *SSHBackend) AddConnection(command *commonbackend.AddConnectionCommand) (bool, error) {
-	for _, ipListener := range backend.data.ListenOnIPs {
+func (backend *SSHBackend) StartProxy(command *commonbackend.AddConnectionCommand) (bool, error) {
+	listenerObject := &SSHListener{
+		SourceIP:   command.SourceIP,
+		SourcePort: command.SourcePort,
+		DestPort:   command.DestPort,
+		Protocol:   command.Protocol,
+		Listeners:  []net.Listener{},
+	}
+
+	for _, ipListener := range backend.config.ListenOnIPs {
 		ip := net.TCPAddr{
 			IP:   net.ParseIP(ipListener),
 			Port: int(command.DestPort),
 		}
+
 		listener, err := backend.conn.ListenTCP(&ip)
+
 		if err != nil {
+			// Incase we error out, we clean up all the other listeners
+			for _, listener := range listenerObject.Listeners {
+				err = listener.Close()
+
+				if err != nil {
+					log.Warnf("failed to close listener upon failure cleanup: %s", err.Error())
+				}
+			}
+
 			return false, err
 		}
+
+		listenerObject.Listeners = append(listenerObject.Listeners, listener)
+
 		go func() {
 			for {
 				forwardedConn, err := listener.Accept()
+
 				if err != nil {
 					log.Warnf("failed to accept listener connection: %s", err.Error())
 					continue
 				}
+
 				sourceConn, err := net.Dial("tcp", command.SourceIP+":"+string(command.SourcePort))
+
 				if err != nil {
 					log.Warnf("failed to dial source connection: %s", err.Error())
 					continue
 				}
+
+				clientIP := forwardedConn.RemoteAddr().String()
+				clientPort, err := strconv.Atoi(clientIP[strings.Index(clientIP, ":"):])
+
+				if err != nil {
+					log.Warnf("failed to parse client port: %s", err.Error())
+					continue
+				}
+
+				advertisedConn := &commonbackend.ClientConnection{
+					SourceIP:   command.SourceIP,
+					SourcePort: command.SourcePort,
+					DestPort:   command.DestPort,
+					ClientIP:   clientIP[:strings.Index(clientIP, ":")],
+					ClientPort: uint16(clientPort),
+
+					// FIXME (imterah): shouldn't protocol be in here?
+					// Protocol:   command.Protocol,
+				}
+
+				backend.arrayPropMutex.Lock()
+				backend.clients = append(backend.clients, advertisedConn)
+				backend.arrayPropMutex.Unlock()
+
+				cleanupJob := func() {
+					defer backend.arrayPropMutex.Unlock()
+					err := sourceConn.Close()
+
+					if err != nil {
+						log.Warnf("failed to close source connection: %s", err.Error())
+					}
+
+					err = forwardedConn.Close()
+
+					if err != nil {
+						log.Warnf("failed to close forwarded/proxied connection: %s", err.Error())
+					}
+
+					backend.arrayPropMutex.Lock()
+
+					for clientIndex, clientInstance := range backend.clients {
+						// Check if memory addresses are equal for the pointer
+						if clientInstance == advertisedConn {
+							// Splice out the clientInstance by clientIndex
+
+							// TODO: change approach. It works but it's a bit wonky imho
+							// I asked AI to do this as it's a relatively simple task and I forgot how to do this effectively
+							backend.clients = append(backend.clients[:clientIndex], backend.clients[clientIndex+1:]...)
+							return
+						}
+					}
+
+					log.Warn("failed to delete client from clients metadata: couldn't find client in the array")
+				}
+
 				sourceBuffer := make([]byte, 65535)
 				forwardedBuffer := make([]byte, 65535)
+
 				go func() {
-					defer sourceConn.Close()
-					defer forwardedConn.Close()
+					defer cleanupJob()
 
 					for {
 						len, err := forwardedConn.Read(forwardedBuffer)
@@ -115,9 +212,9 @@ func (backend *SSHBackend) AddConnection(command *commonbackend.AddConnectionCom
 						}
 					}
 				}()
+
 				go func() {
-					defer sourceConn.Close()
-					defer forwardedConn.Close()
+					defer cleanupJob()
 
 					for {
 						len, err := sourceConn.Read(sourceBuffer)
@@ -137,16 +234,46 @@ func (backend *SSHBackend) AddConnection(command *commonbackend.AddConnectionCom
 		}()
 	}
 
+	backend.arrayPropMutex.Lock()
+	backend.proxies = append(backend.proxies, listenerObject)
+	backend.arrayPropMutex.Unlock()
+
 	return true, nil
 }
 
-func (backend *SSHBackend) RemoveConnection(command *commonbackend.RemoveConnectionCommand) (bool, error) {
-	// FIXME: implement
-	return true, nil
+func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveConnectionCommand) (bool, error) {
+	defer backend.arrayPropMutex.Unlock()
+	backend.arrayPropMutex.Lock()
+
+	for proxyIndex, proxy := range backend.proxies {
+		// Check if memory addresses are equal for the pointer
+		if command.SourceIP == proxy.SourceIP && command.SourcePort == proxy.SourcePort && command.DestPort == proxy.DestPort && command.Protocol == proxy.Protocol {
+			log.Debug("found proxy in StopProxy. shutting down listeners")
+
+			for _, listener := range proxy.Listeners {
+				err := listener.Close()
+
+				if err != nil {
+					log.Warnf("failed to stop listener in StopProxy: %s", err.Error())
+				}
+			}
+
+			// Splice out the proxy instance by proxyIndex
+
+			// TODO: change approach. It works but it's a bit wonky imho
+			// I asked AI to do this as it's a relatively simple task and I forgot how to do this effectively
+			backend.proxies = append(backend.proxies[:proxyIndex], backend.proxies[proxyIndex+1:]...)
+			return true, nil
+		}
+	}
+
+	return false, fmt.Errorf("could not find the proxy")
 }
 
-func (backend *SSHBackend) GetAllConnections() []*commonbackend.ClientConnection {
-	// return []*commonbackend.ClientConnection{}
+func (backend *SSHBackend) GetAllClientConnections() []*commonbackend.ClientConnection {
+	defer backend.arrayPropMutex.Unlock()
+	backend.arrayPropMutex.Lock()
+
 	return backend.clients
 }
 
@@ -154,7 +281,7 @@ func (backend *SSHBackend) CheckParametersForConnections(clientParameters *commo
 	if clientParameters.Protocol != "tcp" {
 		return &commonbackend.CheckParametersResponse{
 			IsValid: false,
-			Message: "Only TCP is supported",
+			Message: "Only TCP is supported for SSH",
 		}
 	}
 
@@ -166,8 +293,7 @@ func (backend *SSHBackend) CheckParametersForConnections(clientParameters *commo
 func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *commonbackend.CheckParametersResponse {
 	var backendData SSHBackendData
 
-	err := json.Unmarshal(arguments, &backendData) // ?????
-	if err != nil {
+	if err := json.Unmarshal(arguments, &backendData); err != nil {
 		return &commonbackend.CheckParametersResponse{
 			IsValid: false,
 			Message: fmt.Sprintf("could not read json: %s", err.Error()),

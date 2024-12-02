@@ -59,7 +59,7 @@ func (helper *BackendApplicationHelper) Start() error {
 				return fmt.Errorf("failed to typecast")
 			}
 
-			_, _ = helper.Backend.AddConnection(command)
+			_, _ = helper.Backend.StartProxy(command)
 		case "removeConnection":
 			// TODO: implement response logic
 			command, ok := commandRaw.(*commonbackend.RemoveConnectionCommand)
@@ -68,7 +68,7 @@ func (helper *BackendApplicationHelper) Start() error {
 				return fmt.Errorf("failed to typecast")
 			}
 
-			_, _ = helper.Backend.RemoveConnection(command)
+			_, _ = helper.Backend.StopProxy(command)
 		case "getAllConnections":
 			_, ok := commandRaw.(*commonbackend.AddConnectionCommand)
 
@@ -76,7 +76,7 @@ func (helper *BackendApplicationHelper) Start() error {
 				return fmt.Errorf("failed to typecast")
 			}
 
-			connections := helper.Backend.GetAllConnections()
+			connections := helper.Backend.GetAllClientConnections()
 
 			serverParams := &commonbackend.ConnectionsResponse{
 				Type:        "connectionsResponse",
