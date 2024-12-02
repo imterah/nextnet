@@ -36,6 +36,7 @@ func marshalIndividualConnectionStruct(conn *ClientConnection) []byte {
 
 	connectionBlock[0] = serverIPVer
 	copy(connectionBlock[1:len(sourceIP)+1], sourceIP)
+
 	binary.BigEndian.PutUint16(connectionBlock[1+len(sourceIP):3+len(sourceIP)], conn.SourcePort)
 	binary.BigEndian.PutUint16(connectionBlock[3+len(sourceIP):5+len(sourceIP)], conn.DestPort)
 
@@ -44,6 +45,43 @@ func marshalIndividualConnectionStruct(conn *ClientConnection) []byte {
 	binary.BigEndian.PutUint16(connectionBlock[6+len(sourceIP)+len(clientIP):8+len(sourceIP)+len(clientIP)], conn.ClientPort)
 
 	return connectionBlock
+}
+
+func marshalIndividualProxyStruct(conn *ProxyConnection) ([]byte, error) {
+	sourceIPOriginal := net.ParseIP(conn.SourceIP)
+
+	var sourceIPVer uint8
+	var sourceIP []byte
+
+	if sourceIPOriginal.To4() == nil {
+		sourceIPVer = IPv6
+		sourceIP = sourceIPOriginal.To16()
+	} else {
+		sourceIPVer = IPv4
+		sourceIP = sourceIPOriginal.To4()
+	}
+
+	proxyBlock := make([]byte, 6+len(sourceIP))
+
+	proxyBlock[0] = sourceIPVer
+	copy(proxyBlock[1:len(sourceIP)+1], sourceIP)
+
+	binary.BigEndian.PutUint16(proxyBlock[1+len(sourceIP):3+len(sourceIP)], conn.SourcePort)
+	binary.BigEndian.PutUint16(proxyBlock[3+len(sourceIP):5+len(sourceIP)], conn.DestPort)
+
+	var protocolVersion uint8
+
+	if conn.Protocol == "tcp" {
+		protocolVersion = TCP
+	} else if conn.Protocol == "udp" {
+		protocolVersion = UDP
+	} else {
+		return proxyBlock, fmt.Errorf("invalid protocol recieved")
+	}
+
+	proxyBlock[5+len(sourceIP)] = protocolVersion
+
+	return proxyBlock, nil
 }
 
 func Marshal(commandType string, command interface{}) ([]byte, error) {
@@ -68,10 +106,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 			return nil, fmt.Errorf("failed to typecast")
 		}
 
-		stopCommandBytes := make([]byte, 1)
-		stopCommandBytes[0] = StopCommandID
-
-		return stopCommandBytes, nil
+		return []byte{StopCommandID}, nil
 	case "addConnection":
 		addConnectionCommand, ok := command.(*AddConnectionCommand)
 
@@ -273,6 +308,190 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		}
 
 		return checkResponseBytes, nil
+	case "backendStatusResponse":
+		backendStatusResponse, ok := command.(*BackendStatusResponse)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		var isRunning uint8
+
+		if backendStatusResponse.IsRunning {
+			isRunning = 1
+		} else {
+			isRunning = 0
+		}
+
+		statusResponseBytes := make([]byte, 3+2+len(backendStatusResponse.Message))
+		statusResponseBytes[0] = BackendStatusResponseID
+		statusResponseBytes[1] = isRunning
+		statusResponseBytes[2] = byte(backendStatusResponse.StatusCode)
+
+		binary.BigEndian.PutUint16(statusResponseBytes[3:5], uint16(len(backendStatusResponse.Message)))
+
+		if len(backendStatusResponse.Message) != 0 {
+			copy(statusResponseBytes[5:], []byte(backendStatusResponse.Message))
+		}
+
+		return statusResponseBytes, nil
+	case "backendStatusRequest":
+		_, ok := command.(*BackendStatusRequest)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		statusRequestBytes := make([]byte, 2)
+		statusRequestBytes[0] = BackendStatusRequestID
+
+		return statusRequestBytes, nil
+	case "proxyStatusRequest":
+		proxyStatusRequest, ok := command.(*ProxyStatusRequest)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		sourceIP := net.ParseIP(proxyStatusRequest.SourceIP)
+
+		var ipVer uint8
+		var ipBytes []byte
+
+		if sourceIP.To4() == nil {
+			ipBytes = sourceIP.To16()
+			ipVer = IPv6
+		} else {
+			ipBytes = sourceIP.To4()
+			ipVer = IPv4
+		}
+
+		proxyStatusRequestBytes := make([]byte, 1+1+len(ipBytes)+2+2+1)
+
+		proxyStatusRequestBytes[0] = ProxyStatusRequestID
+		proxyStatusRequestBytes[1] = ipVer
+
+		copy(proxyStatusRequestBytes[2:2+len(ipBytes)], ipBytes)
+
+		binary.BigEndian.PutUint16(proxyStatusRequestBytes[2+len(ipBytes):4+len(ipBytes)], proxyStatusRequest.SourcePort)
+		binary.BigEndian.PutUint16(proxyStatusRequestBytes[4+len(ipBytes):6+len(ipBytes)], proxyStatusRequest.DestPort)
+
+		var protocol uint8
+
+		if proxyStatusRequest.Protocol == "tcp" {
+			protocol = TCP
+		} else if proxyStatusRequest.Protocol == "udp" {
+			protocol = UDP
+		} else {
+			return nil, fmt.Errorf("invalid protocol")
+		}
+
+		proxyStatusRequestBytes[6+len(ipBytes)] = protocol
+
+		return proxyStatusRequestBytes, nil
+	case "proxyStatusResponse":
+		proxyStatusResponse, ok := command.(*ProxyStatusResponse)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		sourceIP := net.ParseIP(proxyStatusResponse.SourceIP)
+
+		var ipVer uint8
+		var ipBytes []byte
+
+		if sourceIP.To4() == nil {
+			ipBytes = sourceIP.To16()
+			ipVer = IPv6
+		} else {
+			ipBytes = sourceIP.To4()
+			ipVer = IPv4
+		}
+
+		proxyStatusResponseBytes := make([]byte, 1+1+len(ipBytes)+2+2+1+1)
+
+		proxyStatusResponseBytes[0] = ProxyStatusResponseID
+		proxyStatusResponseBytes[1] = ipVer
+
+		copy(proxyStatusResponseBytes[2:2+len(ipBytes)], ipBytes)
+
+		binary.BigEndian.PutUint16(proxyStatusResponseBytes[2+len(ipBytes):4+len(ipBytes)], proxyStatusResponse.SourcePort)
+		binary.BigEndian.PutUint16(proxyStatusResponseBytes[4+len(ipBytes):6+len(ipBytes)], proxyStatusResponse.DestPort)
+
+		var protocol uint8
+
+		if proxyStatusResponse.Protocol == "tcp" {
+			protocol = TCP
+		} else if proxyStatusResponse.Protocol == "udp" {
+			protocol = UDP
+		} else {
+			return nil, fmt.Errorf("invalid protocol")
+		}
+
+		proxyStatusResponseBytes[6+len(ipBytes)] = protocol
+
+		var isActive uint8
+
+		if proxyStatusResponse.IsActive {
+			isActive = 1
+		} else {
+			isActive = 0
+		}
+
+		proxyStatusResponseBytes[7+len(ipBytes)] = isActive
+
+		return proxyStatusResponseBytes, nil
+	case "proxyConnectionResponse":
+		proxyConectionResponse, ok := command.(*ProxyConnectionResponse)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		proxyArray := make([][]byte, len(proxyConectionResponse.Proxies))
+		totalSize := 0
+
+		for proxyIndex, proxy := range proxyConectionResponse.Proxies {
+			var err error
+			proxyArray[proxyIndex], err = marshalIndividualProxyStruct(proxy)
+
+			if err != nil {
+				return nil, err
+			}
+
+			totalSize += len(proxyArray[proxyIndex]) + 1
+		}
+
+		connectionCommandArray := make([]byte, totalSize+1)
+		connectionCommandArray[0] = ProxyConnectionResponseID
+
+		currentPosition := 1
+
+		for _, connection := range proxyArray {
+			copy(connectionCommandArray[currentPosition:currentPosition+len(connection)], connection)
+			connectionCommandArray[currentPosition+len(connection)] = '\r'
+			currentPosition += len(connection) + 1
+		}
+
+		connectionCommandArray[totalSize] = '\n'
+		return connectionCommandArray, nil
+	case "proxyConnectionRequest":
+		_, ok := command.(*ProxyConnectionRequest)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		return []byte{ProxyConnectionRequestID}, nil
+	case "getAllConnectionsRequest":
+		_, ok := command.(*GetAllConnectionsRequest)
+
+		if !ok {
+			return nil, fmt.Errorf("failed to typecast")
+		}
+
+		return []byte{GetAllConnectionsRequestID}, nil
 	}
 
 	return nil, fmt.Errorf("couldn't match command")

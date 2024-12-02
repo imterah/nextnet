@@ -79,6 +79,65 @@ func unmarshalIndividualConnectionStruct(conn io.Reader) (*ClientConnection, err
 	}, nil
 }
 
+func unmarshalIndividualProxyStruct(conn io.Reader) (*ProxyConnection, error) {
+	ipVersion := make([]byte, 1)
+
+	if _, err := conn.Read(ipVersion); err != nil {
+		return nil, fmt.Errorf("couldn't read ip version")
+	}
+
+	var ipSize uint8
+
+	if ipVersion[0] == 4 {
+		ipSize = IPv4Size
+	} else if ipVersion[0] == 6 {
+		ipSize = IPv6Size
+	} else {
+		return nil, fmt.Errorf("invalid IP version recieved")
+	}
+
+	ip := make(net.IP, ipSize)
+
+	if _, err := conn.Read(ip); err != nil {
+		return nil, fmt.Errorf("couldn't read source IP")
+	}
+
+	sourcePort := make([]byte, 2)
+
+	if _, err := conn.Read(sourcePort); err != nil {
+		return nil, fmt.Errorf("couldn't read source port")
+	}
+
+	destPort := make([]byte, 2)
+
+	if _, err := conn.Read(destPort); err != nil {
+		return nil, fmt.Errorf("couldn't read destination port")
+	}
+
+	protocolBytes := make([]byte, 1)
+
+	if _, err := conn.Read(protocolBytes); err != nil {
+		return nil, fmt.Errorf("couldn't read protocol")
+	}
+
+	var protocol string
+
+	if protocolBytes[0] == TCP {
+		protocol = "tcp"
+	} else if protocolBytes[0] == UDP {
+		protocol = "udp"
+	} else {
+		return nil, fmt.Errorf("invalid protocol")
+	}
+
+	return &ProxyConnection{
+		SourceIP:   ip.String(),
+		SourcePort: binary.BigEndian.Uint16(sourcePort),
+		DestPort:   binary.BigEndian.Uint16(destPort),
+		Protocol:   protocol,
+	}, nil
+}
+
 func Unmarshal(conn io.Reader) (string, interface{}, error) {
 	commandType := make([]byte, 1)
 
@@ -380,6 +439,213 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			InResponseTo: checkMethod,
 			IsValid:      isValid[0] == 1,
 			Message:      message,
+		}, nil
+	case BackendStatusResponseID:
+		isRunning := make([]byte, 1)
+
+		if _, err := conn.Read(isRunning); err != nil {
+			return "", nil, fmt.Errorf("couldn't read isRunning field")
+		}
+
+		statusCode := make([]byte, 1)
+
+		if _, err := conn.Read(statusCode); err != nil {
+			return "", nil, fmt.Errorf("couldn't read status code field")
+		}
+
+		messageLengthBytes := make([]byte, 2)
+
+		if _, err := conn.Read(messageLengthBytes); err != nil {
+			return "", nil, fmt.Errorf("couldn't read message length")
+		}
+
+		messageLength := binary.BigEndian.Uint16(messageLengthBytes)
+		var message string
+
+		if messageLength != 0 {
+			messageBytes := make([]byte, messageLength)
+
+			if _, err := conn.Read(messageBytes); err != nil {
+				return "", nil, fmt.Errorf("couldn't read message")
+			}
+
+			message = string(messageBytes)
+		}
+
+		return "backendStatusResponse", &BackendStatusResponse{
+			Type:       "backendStatusResponse",
+			IsRunning:  isRunning[0] == 1,
+			StatusCode: int(statusCode[0]),
+			Message:    message,
+		}, nil
+	case BackendStatusRequestID:
+		return "backendStatusRequest", &BackendStatusRequest{
+			Type: "backendStatusRequest",
+		}, nil
+	case ProxyStatusRequestID:
+		ipVersion := make([]byte, 1)
+
+		if _, err := conn.Read(ipVersion); err != nil {
+			return "", nil, fmt.Errorf("couldn't read ip version")
+		}
+
+		var ipSize uint8
+
+		if ipVersion[0] == 4 {
+			ipSize = IPv4Size
+		} else if ipVersion[0] == 6 {
+			ipSize = IPv6Size
+		} else {
+			return "", nil, fmt.Errorf("invalid IP version recieved")
+		}
+
+		ip := make(net.IP, ipSize)
+
+		if _, err := conn.Read(ip); err != nil {
+			return "", nil, fmt.Errorf("couldn't read source IP")
+		}
+
+		sourcePort := make([]byte, 2)
+
+		if _, err := conn.Read(sourcePort); err != nil {
+			return "", nil, fmt.Errorf("couldn't read source port")
+		}
+
+		destPort := make([]byte, 2)
+
+		if _, err := conn.Read(destPort); err != nil {
+			return "", nil, fmt.Errorf("couldn't read destination port")
+		}
+
+		protocolBytes := make([]byte, 1)
+
+		if _, err := conn.Read(protocolBytes); err != nil {
+			return "", nil, fmt.Errorf("couldn't read protocol")
+		}
+
+		var protocol string
+
+		if protocolBytes[0] == TCP {
+			protocol = "tcp"
+		} else if protocolBytes[1] == UDP {
+			protocol = "udp"
+		} else {
+			return "", nil, fmt.Errorf("invalid protocol")
+		}
+
+		return "proxyStatusRequest", &ProxyStatusRequest{
+			Type:       "proxyStatusRequest",
+			SourceIP:   ip.String(),
+			SourcePort: binary.BigEndian.Uint16(sourcePort),
+			DestPort:   binary.BigEndian.Uint16(destPort),
+			Protocol:   protocol,
+		}, nil
+	case ProxyStatusResponseID:
+		ipVersion := make([]byte, 1)
+
+		if _, err := conn.Read(ipVersion); err != nil {
+			return "", nil, fmt.Errorf("couldn't read ip version")
+		}
+
+		var ipSize uint8
+
+		if ipVersion[0] == 4 {
+			ipSize = IPv4Size
+		} else if ipVersion[0] == 6 {
+			ipSize = IPv6Size
+		} else {
+			return "", nil, fmt.Errorf("invalid IP version recieved")
+		}
+
+		ip := make(net.IP, ipSize)
+
+		if _, err := conn.Read(ip); err != nil {
+			return "", nil, fmt.Errorf("couldn't read source IP")
+		}
+
+		sourcePort := make([]byte, 2)
+
+		if _, err := conn.Read(sourcePort); err != nil {
+			return "", nil, fmt.Errorf("couldn't read source port")
+		}
+
+		destPort := make([]byte, 2)
+
+		if _, err := conn.Read(destPort); err != nil {
+			return "", nil, fmt.Errorf("couldn't read destination port")
+		}
+
+		protocolBytes := make([]byte, 1)
+
+		if _, err := conn.Read(protocolBytes); err != nil {
+			return "", nil, fmt.Errorf("couldn't read protocol")
+		}
+
+		var protocol string
+
+		if protocolBytes[0] == TCP {
+			protocol = "tcp"
+		} else if protocolBytes[1] == UDP {
+			protocol = "udp"
+		} else {
+			return "", nil, fmt.Errorf("invalid protocol")
+		}
+
+		isActive := make([]byte, 1)
+
+		if _, err := conn.Read(isActive); err != nil {
+			return "", nil, fmt.Errorf("couldn't read isActive field")
+		}
+
+		return "proxyStatusResponse", &ProxyStatusResponse{
+			Type:       "proxyStatusResponse",
+			SourceIP:   ip.String(),
+			SourcePort: binary.BigEndian.Uint16(sourcePort),
+			DestPort:   binary.BigEndian.Uint16(destPort),
+			Protocol:   protocol,
+			IsActive:   isActive[0] == 1,
+		}, nil
+	case ProxyConnectionRequestID:
+		return "proxyConnectionRequest", &ProxyConnectionRequest{
+			Type: "proxyConnectionRequest",
+		}, nil
+	case ProxyConnectionResponseID:
+		proxies := []*ProxyConnection{}
+		delimiter := make([]byte, 1)
+		var errorReturn error
+
+		// Infinite loop because we don't know the length
+		for {
+			proxy, err := unmarshalIndividualProxyStruct(conn)
+
+			if err != nil {
+				return "", nil, err
+			}
+
+			proxies = append(proxies, proxy)
+
+			if _, err := conn.Read(delimiter); err != nil {
+				return "", nil, fmt.Errorf("couldn't read delimiter")
+			}
+
+			if delimiter[0] == '\r' {
+				continue
+			} else if delimiter[0] == '\n' {
+				break
+			} else {
+				// WTF? This shouldn't happen. Break out and return, but give an error
+				errorReturn = fmt.Errorf("invalid delimiter recieved while processing stream")
+				break
+			}
+		}
+
+		return "proxyConnectionResponse", &ProxyConnectionResponse{
+			Type:    "proxyConnectionResponse",
+			Proxies: proxies,
+		}, errorReturn
+	case GetAllConnectionsRequestID:
+		return "getAllConnectionsRequest", &GetAllConnectionsRequest{
+			Type: "getAllConnectionsRequest",
 		}, nil
 	}
 

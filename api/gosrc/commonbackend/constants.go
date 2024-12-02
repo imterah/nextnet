@@ -1,13 +1,5 @@
 package commonbackend
 
-// Not all of these structs are implemented commands.
-// Currently unimplemented commands:
-//   GetAllConnectionsRequest
-//   BackendStatusResponse
-//   BackendStatusRequest
-//   ProxyStatusRequest
-//   ProxyStatusResponse
-
 // TODO (imterah): Rename AddConnectionCommand/RemoveConnectionCommand to AddProxyCommand/RemoveProxyCommand
 // and their associated function calls
 
@@ -37,7 +29,7 @@ type RemoveConnectionCommand struct {
 }
 
 type ProxyStatusRequest struct {
-	Type       string // Will be 'getProxyStatus' always
+	Type       string // Will be 'proxyStatusRequest' always
 	SourceIP   string
 	SourcePort uint16
 	DestPort   uint16
@@ -61,20 +53,23 @@ type ProxyConnection struct {
 }
 
 type ProxyConnectionResponse struct {
-	Type        string             // Will be 'proxyConnectionResponse' always
-	Connections []*ProxyConnection // List of connections
+	Type    string             // Will be 'proxyConnectionResponse' always
+	Proxies []*ProxyConnection // List of connections
+}
+
+type ProxyConnectionRequest struct {
+	Type string // Will be 'proxyConnectionRequest' always
 }
 
 type BackendStatusResponse struct {
-	Type         string // Will be 'backendStatusResponse' always
-	InResponseTo string // Can be either for 'start' or 'stop'
-	StatusCode   int    // Either the 'Success' or 'Failure' constant
-	Message      string // String message from the client (ex. failed to dial TCP)
+	Type       string // Will be 'backendStatusResponse' always
+	IsRunning  bool   // Can be either for 'start' or 'stop'
+	StatusCode int    // Either the 'Success' or 'Failure' constant
+	Message    string // String message from the client (ex. failed to dial TCP)
 }
 
 type BackendStatusRequest struct {
-	Type        string // Will be 'backendStatusRequest' always
-	ForProperty string // Can be either for 'start' or 'stop'
+	Type string // Will be 'backendStatusRequest' always
 }
 
 type GetAllConnectionsRequest struct {
@@ -130,6 +125,8 @@ const (
 	BackendStatusRequestID
 	ProxyStatusRequestID
 	ProxyStatusResponseID
+	ProxyConnectionResponseID
+	ProxyConnectionRequestID
 )
 
 const (
