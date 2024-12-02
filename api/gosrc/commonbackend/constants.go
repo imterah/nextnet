@@ -7,7 +7,6 @@ package commonbackend
 //   BackendStatusRequest
 //   ProxyStatusRequest
 //   ProxyStatusResponse
-//   GetAllConnectionsRequest
 
 // TODO (imterah): Rename AddConnectionCommand/RemoveConnectionCommand to AddProxyCommand/RemoveProxyCommand
 // and their associated function calls
@@ -37,7 +36,7 @@ type RemoveConnectionCommand struct {
 	Protocol   string // Will be either 'tcp' or 'udp'
 }
 
-type GetProxyStatus struct {
+type ProxyStatusRequest struct {
 	Type       string // Will be 'getProxyStatus' always
 	SourceIP   string
 	SourcePort uint16
@@ -126,6 +125,11 @@ const (
 	CheckClientParametersID
 	CheckServerParametersID
 	CheckParametersResponseID
+	GetAllConnectionsRequestID
+	BackendStatusResponseID
+	BackendStatusRequestID
+	ProxyStatusRequestID
+	ProxyStatusResponseID
 )
 
 const (
