@@ -254,8 +254,8 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			}
 		}
 
-		return "getAllConnections", &GetAllConnections{
-			Type:        "getAllConnections",
+		return "connectionsResponse", &ConnectionsResponse{
+			Type:        "connectionsResponse",
 			Connections: connections,
 		}, errorReturn
 	case CheckClientParametersID:
@@ -376,10 +376,10 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 		}
 
 		return "checkParametersResponse", &CheckParametersResponse{
-			Type:      "checkParametersResponse",
-			InReplyTo: checkMethod,
-			IsValid:   isValid[0] == 1,
-			Message:   message,
+			Type:         "checkParametersResponse",
+			InResponseTo: checkMethod,
+			IsValid:      isValid[0] == 1,
+			Message:      message,
 		}, nil
 	}
 

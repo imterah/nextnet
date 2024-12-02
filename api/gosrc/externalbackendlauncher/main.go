@@ -33,23 +33,25 @@ func main() {
 	tempDir, err := os.MkdirTemp("", "nextnet-sockets-")
 	logLevel := os.Getenv("NEXTNET_LOG_LEVEL")
 
-	if logLevel != "" {
-		switch logLevel {
-		case "debug":
-			log.SetLevel(log.DebugLevel)
+	if logLevel == "" {
+		logLevel = "fatal"
+	}
 
-		case "info":
-			log.SetLevel(log.InfoLevel)
+	switch logLevel {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
 
-		case "warn":
-			log.SetLevel(log.WarnLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
 
-		case "error":
-			log.SetLevel(log.ErrorLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
 
-		case "fatal":
-			log.SetLevel(log.FatalLevel)
-		}
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
 	}
 
 	if len(os.Args) != 3 {
@@ -109,8 +111,9 @@ func main() {
 	for {
 		log.Info("starting process...")
 		// TODO: can we reuse cmd?
+
 		cmd := exec.Command(executablePath)
-		cmd.Env = append(cmd.Env, fmt.Sprintf("NEXTNET_API_SOCK=%s", sockPath))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("NEXTNET_API_SOCK=%s", sockPath), fmt.Sprintf("NEXTNET_LOG_LEVEL=%s", logLevel))
 
 		cmd.Stdout = stdout
 		cmd.Stderr = stderr

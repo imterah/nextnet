@@ -1,3 +1,8 @@
+# Go artifacts
+api/gosrc/sshbackend/sshbackend
+api/gosrc/dummybackend/dummybackend
+api/gosrc/externalbackendlauncher/externalbackendlauncher
+
 # LOM
 lom/keys
 

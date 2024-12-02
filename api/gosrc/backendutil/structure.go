@@ -3,7 +3,7 @@ package backendutil
 import "git.greysoh.dev/imterah/nextnet/commonbackend"
 
 type BackendInterface interface {
-	StartBackend() (bool, error)
+	StartBackend(arguments []byte) (bool, error)
 	StopBackend() (bool, error)
 	AddConnection(command *commonbackend.AddConnectionCommand) (bool, error)
 	RemoveConnection(command *commonbackend.RemoveConnectionCommand) (bool, error)

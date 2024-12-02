@@ -156,8 +156,8 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		removeConnectionBytes[6+len(ipBytes)] = protocol
 
 		return removeConnectionBytes, nil
-	case "getAllConnections":
-		allConnectionsCommand, ok := command.(*GetAllConnections)
+	case "connectionsResponse":
+		allConnectionsCommand, ok := command.(*ConnectionsResponse)
 
 		if !ok {
 			return nil, fmt.Errorf("failed to typecast")
@@ -247,9 +247,9 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 
 		var checkMethod uint8
 
-		if checkParametersCommand.InReplyTo == "checkClientParameters" {
+		if checkParametersCommand.InResponseTo == "checkClientParameters" {
 			checkMethod = CheckClientParametersID
-		} else if checkParametersCommand.InReplyTo == "checkServerParameters" {
+		} else if checkParametersCommand.InResponseTo == "checkServerParameters" {
 			checkMethod = CheckServerParametersID
 		} else {
 			return nil, fmt.Errorf("invalid mode recieved (must be either checkClientParameters or checkServerParameters)")

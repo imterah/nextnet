@@ -219,8 +219,8 @@ func TestRemoveConnectionCommandMarshalSupport(t *testing.T) {
 }
 
 func TestGetAllConnectionsCommandMarshalSupport(t *testing.T) {
-	commandInput := &GetAllConnections{
-		Type: "getAllConnections",
+	commandInput := &ConnectionsResponse{
+		Type: "connectionsResponse",
 		Connections: []*ClientConnection{
 			{
 				SourceIP:   "127.0.0.1",
@@ -268,7 +268,7 @@ func TestGetAllConnectionsCommandMarshalSupport(t *testing.T) {
 		log.Print("command type does not match up!")
 	}
 
-	commandUnmarshalled, ok := commandUnmarshalledRaw.(*GetAllConnections)
+	commandUnmarshalled, ok := commandUnmarshalledRaw.(*ConnectionsResponse)
 
 	if !ok {
 		t.Fatal("failed typecast")
@@ -418,10 +418,10 @@ func TestCheckServerParametersMarshalSupport(t *testing.T) {
 
 func TestCheckParametersResponseMarshalSupport(t *testing.T) {
 	commandInput := &CheckParametersResponse{
-		Type:      "checkParametersResponse",
-		InReplyTo: "checkClientParameters",
-		IsValid:   true,
-		Message:   "Hello from automated testing",
+		Type:         "checkParametersResponse",
+		InResponseTo: "checkClientParameters",
+		IsValid:      true,
+		Message:      "Hello from automated testing",
 	}
 
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
@@ -457,9 +457,9 @@ func TestCheckParametersResponseMarshalSupport(t *testing.T) {
 		log.Printf("Types are not equal (orig: %s, unmsh: %s)", commandInput.Type, commandUnmarshalled.Type)
 	}
 
-	if commandInput.InReplyTo != commandUnmarshalled.InReplyTo {
+	if commandInput.InResponseTo != commandUnmarshalled.InResponseTo {
 		t.Fail()
-		log.Printf("InReplyTo's are not equal (orig: %s, unmsh: %s)", commandInput.InReplyTo, commandUnmarshalled.InReplyTo)
+		log.Printf("InResponseTo's are not equal (orig: %s, unmsh: %s)", commandInput.InResponseTo, commandUnmarshalled.InResponseTo)
 	}
 
 	if commandInput.IsValid != commandUnmarshalled.IsValid {
