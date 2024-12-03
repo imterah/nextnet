@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,8 +9,17 @@ import (
 	"time"
 
 	"git.greysoh.dev/imterah/nextnet/backendlauncher"
+	"git.greysoh.dev/imterah/nextnet/commonbackend"
 	"github.com/charmbracelet/log"
+	"github.com/urfave/cli/v2"
 )
+
+type ProxyInstance struct {
+	SourceIP   string `json:"sourceIP"`
+	SourcePort uint16 `json:"sourcePort"`
+	DestPort   uint16 `json:"destPort"`
+	Protocol   string `json:"protocol"`
+}
 
 type WriteLogger struct {
 	UseError bool
@@ -33,48 +43,53 @@ func (writer WriteLogger) Write(p []byte) (n int, err error) {
 	return len(p), err
 }
 
-func main() {
-	tempDir, err := os.MkdirTemp("", "nextnet-sockets-")
-	logLevel := os.Getenv("NEXTNET_LOG_LEVEL")
+var (
+	tempDir  string
+	logLevel string
+)
 
-	if logLevel == "" {
-		logLevel = "fatal"
+func entrypoint(cCtx *cli.Context) error {
+	executablePath := cCtx.Args().Get(0)
+
+	if executablePath == "" {
+		return fmt.Errorf("executable file is not set")
 	}
 
-	switch logLevel {
-	case "debug":
-		log.SetLevel(log.DebugLevel)
+	executableParamsPath := cCtx.String("params-path")
 
-	case "info":
-		log.SetLevel(log.InfoLevel)
-
-	case "warn":
-		log.SetLevel(log.WarnLevel)
-
-	case "error":
-		log.SetLevel(log.ErrorLevel)
-
-	case "fatal":
-		log.SetLevel(log.FatalLevel)
+	if executablePath == "" {
+		return fmt.Errorf("executable parameters is not set")
 	}
 
-	if len(os.Args) != 3 {
-		log.Fatalf("missing arguments! example: ./externalbackendlauncher <backend executable> <file with backend arguments>")
+	proxyFilePath := cCtx.String("proxies")
+	proxies := []ProxyInstance{}
+
+	if proxyFilePath != "" {
+		proxyFile, err := os.ReadFile(proxyFilePath)
+
+		if err != nil {
+			return fmt.Errorf("failed to read proxy file: %s", err.Error())
+		}
+
+		err = json.Unmarshal(proxyFile, &proxies)
+
+		if err != nil {
+			return fmt.Errorf("failed to parse proxy file: %s", err.Error())
+		}
 	}
 
-	executablePath := os.Args[1]
-	executableParamsPath := os.Args[2]
+	log.Debugf("discovered %d proxies.", len(proxies))
 
-	_, err = os.ReadFile(executableParamsPath)
+	backendParameters, err := os.ReadFile(executableParamsPath)
 
 	if err != nil {
-		log.Fatalf("could not read backend parameters: %s", err.Error())
+		return fmt.Errorf("could not read backend parameters: %s", err.Error())
 	}
 
 	_, err = os.Stat(executablePath)
 
 	if err != nil {
-		log.Fatalf("failed backend checks: %s", err.Error())
+		return fmt.Errorf("failed to get backend executable information: %s", err.Error())
 	}
 
 	log.Debug("running socket acquisition")
@@ -82,7 +97,7 @@ func main() {
 	sockPath, sockListener, err := backendlauncher.GetUnixSocket(tempDir)
 
 	if err != nil {
-		log.Fatalf("failed to acquire unix socket: %s", err.Error())
+		return fmt.Errorf("failed to acquire unix socket: %s", err.Error())
 	}
 
 	log.Debugf("acquisition was successful: %s", sockPath)
@@ -93,12 +108,133 @@ func main() {
 		for {
 			log.Info("waiting for Unix socket connections...")
 			sock, err := sockListener.Accept()
+			log.Info("recieved connection. initializing...")
 
 			if err != nil {
 				log.Warnf("failed to accept socket connection: %s", err.Error())
 			}
 
 			defer sock.Close()
+
+			startCommand := &commonbackend.Start{
+				Type:      "start",
+				Arguments: backendParameters,
+			}
+
+			startMarshalledCommand, err := commonbackend.Marshal("start", startCommand)
+
+			if err != nil {
+				log.Errorf("failed to generate start command: %s", err.Error())
+				continue
+			}
+
+			if _, err = sock.Write(startMarshalledCommand); err != nil {
+				log.Errorf("failed to write to socket: %s", err.Error())
+				continue
+			}
+
+			commandType, commandRaw, err := commonbackend.Unmarshal(sock)
+
+			if err != nil {
+				log.Errorf("failed to read from/unmarshal from socket: %s", err.Error())
+				continue
+			}
+
+			if commandType != "backendStatusResponse" {
+				log.Errorf("recieved commandType '%s', expecting 'backendStatusResponse'", commandType)
+				continue
+			}
+
+			command, ok := commandRaw.(*commonbackend.BackendStatusResponse)
+
+			if !ok {
+				log.Error("failed to typecast response")
+				continue
+			}
+
+			if !command.IsRunning {
+				var status string
+
+				if command.StatusCode == commonbackend.StatusSuccess {
+					status = "Success"
+				} else {
+					status = "Failure"
+				}
+
+				log.Errorf("failed to start backend (status: %s): %s", status, command.Message)
+				continue
+			}
+
+			log.Info("successfully started backend.")
+
+			hasAnyFailed := false
+
+			for _, proxy := range proxies {
+				log.Infof("initializing proxy %s:%d -> remote:%d", proxy.SourceIP, proxy.SourcePort, proxy.DestPort)
+
+				proxyAddCommand := &commonbackend.AddProxy{
+					Type:       "addProxy",
+					SourceIP:   proxy.SourceIP,
+					SourcePort: proxy.SourcePort,
+					DestPort:   proxy.DestPort,
+					Protocol:   proxy.Protocol,
+				}
+
+				marshalledProxyCommand, err := commonbackend.Marshal("addProxy", proxyAddCommand)
+
+				if err != nil {
+					log.Errorf("failed to generate start command: %s", err.Error())
+					hasAnyFailed = true
+					continue
+				}
+
+				if _, err = sock.Write(marshalledProxyCommand); err != nil {
+					log.Errorf("failed to write to socket: %s", err.Error())
+					hasAnyFailed = true
+					continue
+				}
+
+				commandType, commandRaw, err := commonbackend.Unmarshal(sock)
+
+				if err != nil {
+					log.Errorf("failed to read from/unmarshal from socket: %s", err.Error())
+					hasAnyFailed = true
+					continue
+				}
+
+				if commandType != "proxyStatusResponse" {
+					log.Errorf("recieved commandType '%s', expecting 'proxyStatusResponse'", commandType)
+					hasAnyFailed = true
+					continue
+				}
+
+				command, ok := commandRaw.(*commonbackend.ProxyStatusResponse)
+
+				if !ok {
+					log.Error("failed to typecast response")
+					hasAnyFailed = true
+					continue
+				}
+
+				if !command.IsActive {
+					log.Error("failed to activate: isActive is false in response to AddProxy{} call")
+					hasAnyFailed = true
+					continue
+				}
+
+				log.Infof("successfully initialized proxy %s:%d -> remote:%d", proxy.SourceIP, proxy.SourcePort, proxy.DestPort)
+			}
+
+			if hasAnyFailed {
+				log.Error("failed to initialize all proxies (read logs above)")
+			} else {
+				log.Info("successfully initialized all proxies")
+			}
+
+			log.Debug("entering infinite keepalive loop...")
+
+			for {
+			}
 		}
 	}()
 
@@ -136,5 +272,60 @@ func main() {
 
 		log.Info("sleeping 5 seconds, and then restarting process")
 		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func main() {
+	logLevel = os.Getenv("NEXTNET_LOG_LEVEL")
+
+	if logLevel == "" {
+		logLevel = "fatal"
+	}
+
+	switch logLevel {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+
+	case "info":
+		log.SetLevel(log.InfoLevel)
+
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	}
+
+	var err error
+	tempDir, err = os.MkdirTemp("", "nextnet-sockets-")
+
+	if err != nil {
+		log.Fatalf("failed to create sockets directory: %s", err.Error())
+	}
+
+	app := &cli.App{
+		Name:   "externalbackendlauncher",
+		Usage:  "for development purposes only -- external backend launcher for NextNet",
+		Action: entrypoint,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "params-path",
+				Aliases:  []string{"params", "pp"},
+				Usage:    "file containing the parameters that are sent to the backend",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:    "proxies",
+				Aliases: []string{"p"},
+				Usage:   "file that contains the list of proxies to setup in JSON format",
+			},
+		},
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
 	}
 }
