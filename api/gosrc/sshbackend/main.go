@@ -64,7 +64,8 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 	auth := ssh.PublicKeys(signer)
 
 	config := &ssh.ClientConfig{
-		User: backendData.Username,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		User:            backendData.Username,
 		Auth: []ssh.AuthMethod{
 			auth,
 		},
@@ -140,8 +141,9 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 					continue
 				}
 
-				clientIP := forwardedConn.RemoteAddr().String()
-				clientPort, err := strconv.Atoi(clientIP[strings.Index(clientIP, ":"):])
+				clientIPAndPort := forwardedConn.RemoteAddr().String()
+				clientIP := clientIPAndPort[:strings.LastIndex(clientIPAndPort, ":")]
+				clientPort, err := strconv.Atoi(clientIPAndPort[strings.LastIndex(clientIPAndPort, ":")+1:])
 
 				if err != nil {
 					log.Warnf("failed to parse client port: %s", err.Error())
@@ -152,7 +154,7 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 					SourceIP:   command.SourceIP,
 					SourcePort: command.SourcePort,
 					DestPort:   command.DestPort,
-					ClientIP:   clientIP[:strings.Index(clientIP, ":")],
+					ClientIP:   clientIP,
 					ClientPort: uint16(clientPort),
 
 					// FIXME (imterah): shouldn't protocol be in here?

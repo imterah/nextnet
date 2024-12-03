@@ -1,8 +1,5 @@
 package commonbackend
 
-// TODO (imterah): Rename AddConnectionCommand/RemoveConnectionCommand to AddProxyCommand/RemoveProxyCommand
-// and their associated function calls
-
 type Start struct {
 	Type      string // Will be 'start' always
 	Arguments []byte
