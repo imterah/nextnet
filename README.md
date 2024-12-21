@@ -3,10 +3,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/built-with_docker-purple" alt="Docker Badge"/>
   <img src="https://img.shields.io/badge/built-with_Go-blue" alt="Golang Badge">
-  <img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License Badge"/>
+  <img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License Badge (licensed under BSD-3-Clause)"/>
 </p>
-
-<br>
 
 <p align="center">
   <b>Port forwarding across boundaries.</b>
