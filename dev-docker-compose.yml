@@ -5,7 +5,7 @@
 services:
   postgres:
     image: postgres:17.2
-    container_name: nextnet-postgres
+    container_name: hermes-postgres
     restart: always
     environment:
       POSTGRES_DB: nextnet

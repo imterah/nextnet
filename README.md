@@ -1,18 +1,19 @@
-<h1 align="center">NextNet</h1>
+<h1 align="center">Hermes</h1>
 
 <p align="center">
-   <a href="https://builtwithnix.org"><img src="https://builtwithnix.org/badge.svg" alt="built with nix" height="20"/></a>
-   <img src="https://img.shields.io/github/license/greysoh/nextnet" alt="License Badge"/>
+  <img src="https://img.shields.io/badge/built-with_docker-purple" alt="Docker Badge"/>
+  <img src="https://img.shields.io/badge/built-with_Go-blue" alt="Golang Badge">
+  <img src="https://img.shields.io/badge/license-BSD--3--Clause-green" alt="License Badge"/>
 </p>
 
 <br>
 
-**NextNet is a dashboard to manage portforwarding technologies.**
-
+**Port forwarding across boundaries.**
 <h2 align="center">Local Development</h2>
 
 > [!NOTE]
-> Using [nix](https://builtwithnix.org) is recommended. If you're not using Nix, install the Go language & language server (`go` & `gopls`), Node.JS, and `lsof`.
+> Using [Nix](https://builtwithnix.org) is recommended for the development environment. If you're not using it, install Go and NodeJS.
+  Using [Docker](https://www.docker.com/) is required for database configuration.
 
 1. First, make sure you have a sane copy of Docker installed, and make sure the copy of Docker works.
 
@@ -29,17 +30,17 @@
 <h2 align="center">Production Deployment</h2>
 
 > [!WARNING]
-> Deploying using docker compose is the only officially supported deployment method. Here be dragons!
+> Deploying using [Docker Compose](https://docs.docker.com/compose/) is the only officially supported deployment method.
 
 1. Copy and change the default password (or username & db name too) from the template file `prod-docker.env`:
-   ```bash
-   sed "s/POSTGRES_PASSWORD=nextnet/POSTGRES_PASSWORD=$(head -c 500 /dev/random | sha512sum | cut -d " " -f 1)/g" prod-docker.env > .env
-   ```
+  ```bash
+  sed "s/POSTGRES_PASSWORD=nextnet/POSTGRES_PASSWORD=$(head -c 500 /dev/random | sha512sum | cut -d " " -f 1)/g" prod-docker.env > .env
+  ```
 
 2. Build the docker stack: `docker compose --env-file .env up -d`
 
 <h2 align="center">Troubleshooting</h2>
 
-* I'm using the SSH tunneling, and I can't reach any of the tunnels publicly.
+* I'm using SSH tunneling, and I can't reach any of the tunnels publicly.
 
   - Be sure to enable GatewayPorts in your sshd config (in `/etc/ssh/sshd_config` on most systems). Also, be sure to check your firewall rules on your system and your network.
