@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"git.greysoh.dev/imterah/nextnet/backendutil"
-	"git.greysoh.dev/imterah/nextnet/commonbackend"
+	"git.terah.dev/imterah/hermes/backendutil"
+	"git.terah.dev/imterah/hermes/commonbackend"
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 )
@@ -310,7 +310,7 @@ func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *commonba
 }
 
 func main() {
-	logLevel := os.Getenv("NEXTNET_LOG_LEVEL")
+	logLevel := os.Getenv("HERMES_LOG_LEVEL")
 
 	if logLevel != "" {
 		switch logLevel {

@@ -1,10 +1,10 @@
 # Go artifacts
-api/gosrc/sshbackend/sshbackend
-api/gosrc/dummybackend/dummybackend
-api/gosrc/externalbackendlauncher/externalbackendlauncher
+backend/sshbackend/sshbackend
+backend/dummybackend/dummybackend
+backend/externalbackendlauncher/externalbackendlauncher
 
 # LOM
-lom/keys
+sshfrontend/keys
 
 # Output
 out

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"git.greysoh.dev/imterah/nextnet/backendutil"
-	"git.greysoh.dev/imterah/nextnet/commonbackend"
+	"git.terah.dev/imterah/hermes/backendutil"
+	"git.terah.dev/imterah/hermes/commonbackend"
 	"github.com/charmbracelet/log"
 )
 
@@ -51,7 +51,7 @@ func (backend *DummyBackend) CheckParametersForBackend(arguments []byte) *common
 
 func main() {
 	// When using logging, you should use charmbracelet/log, because that's what everything else uses in this ecosystem of a project. - imterah
-	logLevel := os.Getenv("NEXTNET_LOG_LEVEL")
+	logLevel := os.Getenv("HERMES_LOG_LEVEL")
 
 	if logLevel != "" {
 		switch logLevel {

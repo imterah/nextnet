@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"git.greysoh.dev/imterah/nextnet/backendlauncher"
-	"git.greysoh.dev/imterah/nextnet/commonbackend"
+	"git.terah.dev/imterah/hermes/backendlauncher"
+	"git.terah.dev/imterah/hermes/commonbackend"
 	"github.com/charmbracelet/log"
 	"github.com/urfave/cli/v2"
 )
@@ -25,6 +25,7 @@ type WriteLogger struct {
 	UseError bool
 }
 
+// TODO: deprecate UseError switching
 func (writer WriteLogger) Write(p []byte) (n int, err error) {
 	logSplit := strings.Split(string(p), "\n")
 
@@ -253,7 +254,7 @@ func entrypoint(cCtx *cli.Context) error {
 		// TODO: can we reuse cmd?
 
 		cmd := exec.Command(executablePath)
-		cmd.Env = append(cmd.Env, fmt.Sprintf("NEXTNET_API_SOCK=%s", sockPath), fmt.Sprintf("NEXTNET_LOG_LEVEL=%s", logLevel))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("HERMES_API_SOCK=%s", sockPath), fmt.Sprintf("HERMES_LOG_LEVEL=%s", logLevel))
 
 		cmd.Stdout = stdout
 		cmd.Stderr = stderr
@@ -276,7 +277,7 @@ func entrypoint(cCtx *cli.Context) error {
 }
 
 func main() {
-	logLevel = os.Getenv("NEXTNET_LOG_LEVEL")
+	logLevel = os.Getenv("HERMES_LOG_LEVEL")
 
 	if logLevel == "" {
 		logLevel = "fatal"
@@ -300,7 +301,7 @@ func main() {
 	}
 
 	var err error
-	tempDir, err = os.MkdirTemp("", "nextnet-sockets-")
+	tempDir, err = os.MkdirTemp("", "hermes-sockets-")
 
 	if err != nil {
 		log.Fatalf("failed to create sockets directory: %s", err.Error())
@@ -308,7 +309,7 @@ func main() {
 
 	app := &cli.App{
 		Name:   "externalbackendlauncher",
-		Usage:  "for development purposes only -- external backend launcher for NextNet",
+		Usage:  "for development purposes only -- external backend launcher for Hermes",
 		Action: entrypoint,
 		Flags: []cli.Flag{
 			&cli.StringFlag{

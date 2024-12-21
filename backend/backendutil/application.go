@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"git.greysoh.dev/imterah/nextnet/commonbackend"
+	"git.terah.dev/imterah/hermes/commonbackend"
 	"github.com/charmbracelet/log"
 )
 
@@ -226,10 +226,10 @@ func (helper *BackendApplicationHelper) Start() error {
 }
 
 func NewHelper(backend BackendInterface) *BackendApplicationHelper {
-	socketPath, ok := os.LookupEnv("NEXTNET_API_SOCK")
+	socketPath, ok := os.LookupEnv("HERMES_API_SOCK")
 
 	if !ok {
-		log.Warn("NEXTNET_API_SOCK is not defined! This will cause an issue unless the backend manually overwrites it")
+		log.Warn("HERMES_API_SOCK is not defined! This will cause an issue unless the backend manually overwrites it")
 	}
 
 	helper := &BackendApplicationHelper{

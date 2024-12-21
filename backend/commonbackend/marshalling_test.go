@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var logLevel = os.Getenv("NEXTNET_LOG_LEVEL")
+var logLevel = os.Getenv("HERMES_LOG_LEVEL")
 
 func TestStartCommandMarshalSupport(t *testing.T) {
 	commandInput := &Start{

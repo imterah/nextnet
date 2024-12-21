@@ -9,18 +9,27 @@ if [ $? -ne 0 ]; then
   docker compose -f dev-docker-compose.yml up -d
 fi
 
-if [ ! -f "api/.env" ]; then
+if [ ! -f "backend/.env" ]; then
+  cp backend/dev.env backend/.env
+fi
+
+if [ ! -d "backend/.tmp" ]; then
+  mkdir backend/.tmp
+fi
+
+if [ ! -f "backend-legacy/.env" ]; then
   cp api/dev.env api/.env
 fi
 
-if [ ! -d "api/node_modules" ]; then
-  pushd api > /dev/null
+if [ ! -d "backend-legacy/node_modules" ]; then
+  pushd backend-legacy > /dev/null
   npm install --save-dev
   npx prisma migrate dev
   popd > /dev/null
 fi
 
-source api/.env
+source backend-legacy/.env
+source backend/.env
 
 on_exit() {
   cd $(git rev-parse --show-toplevel)

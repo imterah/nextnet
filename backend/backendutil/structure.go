@@ -1,6 +1,6 @@
 package backendutil
 
-import "git.greysoh.dev/imterah/nextnet/commonbackend"
+import "git.terah.dev/imterah/hermes/commonbackend"
 
 type BackendInterface interface {
 	StartBackend(arguments []byte) (bool, error)

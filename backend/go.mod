@@ -1,4 +1,4 @@
-module git.greysoh.dev/imterah/nextnet
+module git.terah.dev/imterah/hermes
 
 go 1.23.3
 
