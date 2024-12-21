@@ -8,7 +8,10 @@
 
 <br>
 
-**Port forwarding across boundaries.**
+<p align="center">
+  <b>Port forwarding across boundaries.</b>
+</p>
+
 <h2 align="center">Local Development</h2>
 
 > [!NOTE]
