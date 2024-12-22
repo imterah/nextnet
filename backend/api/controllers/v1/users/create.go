@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -27,18 +26,6 @@ type UserCreationRequest struct {
 	// TODO: implement support
 	ExistingUserToken string `json:"token"`
 	IsBot             bool
-}
-
-var (
-	signupEnabled       bool
-	unsafeSignup        bool
-	forceNoExpiryTokens bool
-)
-
-func init() {
-	signupEnabled = os.Getenv("HERMES_SIGNUP_ENABLED") != ""
-	unsafeSignup = os.Getenv("HERMES_UNSAFE_ADMIN_SIGNUP_ENABLED") != ""
-	forceNoExpiryTokens = os.Getenv("HERMES_FORCE_DISABLE_REFRESH_TOKEN_EXPIRY") != ""
 }
 
 func CreateUser(c *gin.Context) {

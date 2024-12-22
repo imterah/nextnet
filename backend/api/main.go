@@ -92,6 +92,7 @@ func main() {
 
 	// Initialize routes
 	engine.POST("/api/v1/users/create", users.CreateUser)
+	engine.POST("/api/v1/users/login", users.LoginUser)
 
 	log.Infof("Listening on: %s", listeningAddress)
 	err = engine.Run(listeningAddress)
