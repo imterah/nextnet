@@ -18,7 +18,7 @@ if [ ! -d "backend/.tmp" ]; then
 fi
 
 if [ ! -f "backend-legacy/.env" ]; then
-  cp api/dev.env api/.env
+  cp backend-legacy/dev.env backend-legacy/.env
 fi
 
 if [ ! -d "backend-legacy/node_modules" ]; then
