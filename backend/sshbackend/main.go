@@ -24,7 +24,7 @@ type SSHListener struct {
 }
 
 type SSHBackend struct {
-	config         SSHBackendData
+	config         *SSHBackendData
 	conn           *ssh.Client
 	clients        []*commonbackend.ProxyClientConnection
 	proxies        []*SSHListener
@@ -49,7 +49,7 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 		return false, err
 	}
 
-	backend.config = backendData
+	backend.config = &backendData
 
 	if len(backend.config.ListenOnIPs) == 0 {
 		backend.config.ListenOnIPs = []string{"0.0.0.0"}
