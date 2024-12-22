@@ -11,5 +11,8 @@
     "editor.tabSize": 2
   },
 
-  "rust-analyzer.linkedProjects": ["./gui/Cargo.toml"]
+  "[go]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  }
 }
