@@ -28,8 +28,10 @@ if [ ! -d "backend-legacy/node_modules" ]; then
   popd > /dev/null
 fi
 
+set -a
 source backend-legacy/.env
 source backend/.env
+set +a
 
 on_exit() {
   cd $(git rev-parse --show-toplevel)

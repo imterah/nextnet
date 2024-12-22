@@ -5,15 +5,16 @@ meta {
 }
 
 post {
-  url: http://127.0.0.1:3000/api/v1/users/create
+  url: http://127.0.0.1:8000/api/v1/users/create
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "name": "Greysoh Hofuh",
-    "email": "greyson@hofers.cloud",
+    "name": "Test User",
+    "email": "test@example.com",
+    "username": "testuser",
     "password": "hunter123"
   }
 }
