@@ -95,6 +95,7 @@ func main() {
 	engine.POST("/api/v1/users/login", users.LoginUser)
 	engine.POST("/api/v1/users/refresh", users.RefreshUserToken)
 	engine.POST("/api/v1/users/remove", users.RemoveUser)
+	engine.POST("/api/v1/users/lookup", users.LookupUser)
 
 	log.Infof("Listening on: %s", listeningAddress)
 	err = engine.Run(listeningAddress)

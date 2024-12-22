@@ -29,8 +29,6 @@ type UserCreationRequest struct {
 }
 
 func CreateUser(c *gin.Context) {
-	var req UserCreationRequest
-
 	if !signupEnabled && !unsafeSignup {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "Signing up is not enabled at this time.",
@@ -38,6 +36,8 @@ func CreateUser(c *gin.Context) {
 
 		return
 	}
+
+	var req UserCreationRequest
 
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
