@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
-	"git.terah.dev/imterah/hermes/api/constants"
 	"git.terah.dev/imterah/hermes/api/dbcore"
 	"git.terah.dev/imterah/hermes/api/jwtcore"
+	permissionHelper "git.terah.dev/imterah/hermes/api/permissions"
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -92,7 +92,7 @@ func CreateUser(c *gin.Context) {
 
 	permissions := []dbcore.Permission{}
 
-	for _, permission := range constants.DefaultPermissionNodes {
+	for _, permission := range permissionHelper.DefaultPermissionNodes {
 		permissionEnabledState := false
 
 		if unsafeSignup || strings.HasPrefix(permission, "routes.") || permission == "permissions.see" {
