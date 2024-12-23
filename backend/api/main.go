@@ -192,6 +192,7 @@ func entrypoint(cCtx *cli.Context) error {
 	engine.POST("/api/v1/users/lookup", users.LookupUser)
 
 	engine.POST("/api/v1/backends/create", backends.CreateBackend)
+	engine.POST("/api/v1/backends/remove", backends.RemoveBackend)
 
 	log.Infof("Listening on '%s'", listeningAddress)
 	err = engine.Run(listeningAddress)

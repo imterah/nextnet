@@ -74,7 +74,7 @@ func RemoveUser(c *gin.Context) {
 
 	if uid != user.ID {
 		var customUser *dbcore.User
-		userRequest := dbcore.DB.Where("id = ?", uid).Find(&customUser)
+		userRequest := dbcore.DB.Where("id = ?", uid).Find(customUser)
 
 		if userRequest.Error != nil {
 			log.Warnf("failed to find if user exists or not: %s", userRequest.Error)
