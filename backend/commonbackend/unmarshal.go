@@ -403,7 +403,7 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 
 		if checkMethodByte[0] == CheckClientParametersID {
 			checkMethod = "checkClientParameters"
-		} else if checkMethodByte[1] == CheckServerParametersID {
+		} else if checkMethodByte[0] == CheckServerParametersID {
 			checkMethod = "checkServerParameters"
 		} else {
 			return "", nil, fmt.Errorf("invalid check method recieved")

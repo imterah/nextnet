@@ -1,0 +1,10 @@
+[
+  {
+    "name": "ssh",
+    "path": "./sshbackend/sshbackend"
+  },
+  {
+    "name": "dummy",
+    "path": "./dummybackend/dummybackend"
+  }
+]

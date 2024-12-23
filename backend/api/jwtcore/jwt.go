@@ -12,7 +12,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var JWTKey []byte
+var (
+	JWTKey          []byte
+	developmentMode bool
+)
 
 func SetupJWT() error {
 	var err error
@@ -30,6 +33,10 @@ func SetupJWT() error {
 		}
 	} else {
 		JWTKey = []byte(jwtDataString)
+	}
+
+	if os.Getenv("HERMES_DEVELOPMENT_MODE") != "" {
+		developmentMode = true
 	}
 
 	return nil
@@ -83,8 +90,14 @@ func GetUserFromJWT(token string) (*dbcore.User, error) {
 }
 
 func Generate(uid uint) (string, error) {
+	timeMultiplier := 3
+
+	if developmentMode {
+		timeMultiplier = 60 * 24
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(3 * time.Minute)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(timeMultiplier) * time.Minute)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		NotBefore: jwt.NewNumericDate(time.Now()),
 		Audience:  []string{strconv.Itoa(int(uid))},

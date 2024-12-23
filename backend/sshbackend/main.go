@@ -12,6 +12,7 @@ import (
 	"git.terah.dev/imterah/hermes/backendutil"
 	"git.terah.dev/imterah/hermes/commonbackend"
 	"github.com/charmbracelet/log"
+	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -32,10 +33,10 @@ type SSHBackend struct {
 }
 
 type SSHBackendData struct {
-	IP          string   `json:"ip"`
-	Port        uint16   `json:"port"`
-	Username    string   `json:"username"`
-	PrivateKey  string   `json:"privateKey"`
+	IP          string   `json:"ip" validate:"required"`
+	Port        uint16   `json:"port" validate:"required"`
+	Username    string   `json:"username" validate:"required"`
+	PrivateKey  string   `json:"privateKey" validate:"required"`
 	ListenOnIPs []string `json:"listenOnIPs"`
 }
 
@@ -43,9 +44,11 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 	log.Info("SSHBackend is initializing...")
 	var backendData SSHBackendData
 
-	err := json.Unmarshal(bytes, &backendData)
+	if err := json.Unmarshal(bytes, &backendData); err != nil {
+		return false, err
+	}
 
-	if err != nil {
+	if err := validator.New().Struct(&backendData); err != nil {
 		return false, err
 	}
 
@@ -301,6 +304,13 @@ func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *commonba
 		return &commonbackend.CheckParametersResponse{
 			IsValid: false,
 			Message: fmt.Sprintf("could not read json: %s", err.Error()),
+		}
+	}
+
+	if err := validator.New().Struct(&backendData); err != nil {
+		return &commonbackend.CheckParametersResponse{
+			IsValid: false,
+			Message: fmt.Sprintf("failed validation of parameters: %s", err.Error()),
 		}
 	}
 

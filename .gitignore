@@ -2,6 +2,7 @@
 backend/sshbackend/sshbackend
 backend/dummybackend/dummybackend
 backend/externalbackendlauncher/externalbackendlauncher
+backend/api/api
 
 # LOM
 sshfrontend/keys

@@ -113,6 +113,7 @@ func entrypoint(cCtx *cli.Context) error {
 
 			if err != nil {
 				log.Warnf("failed to accept socket connection: %s", err.Error())
+				continue
 			}
 
 			defer sock.Close()
@@ -272,7 +273,7 @@ func entrypoint(cCtx *cli.Context) error {
 		}
 
 		log.Info("sleeping 5 seconds, and then restarting process")
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 

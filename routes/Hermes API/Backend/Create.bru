@@ -5,24 +5,21 @@ meta {
 }
 
 post {
-  url: http://127.0.0.1:3000/api/v1/backends/create
+  url: http://127.0.0.1:8000/api/v1/backends/create
   body: json
   auth: none
 }
 
 body:json {
   {
-    "token": "9d99397be36747b9e6f1858f1efded4756ea5b479fd5c47a6388041eecb44b4958858c6fe15f23a9cf5e9d67f48443c65342e3a69bfde231114df4bb2ab457",
-    "name": "Passyfire Reimpl",
-    "description": "PassyFire never dies",
-    "backend": "passyfire",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiMSJdLCJleHAiOjE3MzUwNjY1NjksIm5iZiI6MTczNDk4MDE2OSwiaWF0IjoxNzM0OTgwMTY5fQ.-9IiM8N-azqBLwrAJkKqIzZ6yuumEzErKzSefXWpzaQ",
+    "name": "SSH",
+    "backend": "ssh",
     "connectionDetails": {
       "ip": "127.0.0.1",
       "port": 22,
-      
-      "users": {
-        "g"
-      }
+      "username": "test",
+      "privateKey": ""
     }
   }
 }
