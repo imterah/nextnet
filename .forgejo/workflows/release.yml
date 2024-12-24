@@ -13,8 +13,6 @@ jobs:
         image: docker:dind
         env:
           DOCKER_TLS_CERTDIR: ""
-    permissions:
-      packages: write
 
     steps:
       - name: Checkout code using Git
@@ -27,17 +25,17 @@ jobs:
           docker context create forgejo --docker host=tcp://dind:2375
           docker context use forgejo
 
-      - name: Build Docker images
-        run: |
-          docker build ./backend --tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
-          docker build ./sshfrontend --tag git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME
-
       - name: Log in to our container registry
         uses: https://github.com/docker/login-action@v3
         with:
           registry: git.terah.dev
           username: ${{github.actor}}
           password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Build Docker images
+        run: |
+          docker build ./backend --tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
+          docker build ./sshfrontend --tag git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME
 
       - name: Upload all Docker images
         run: |
