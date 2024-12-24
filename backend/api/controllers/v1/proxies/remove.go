@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"git.terah.dev/imterah/hermes/api/backendruntime"
 	"git.terah.dev/imterah/hermes/api/dbcore"
 	"git.terah.dev/imterah/hermes/api/jwtcore"
 	"git.terah.dev/imterah/hermes/api/permissions"
+	"git.terah.dev/imterah/hermes/commonbackend"
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -15,10 +17,6 @@ import (
 type ProxyRemovalRequest struct {
 	Token string `validate:"required" json:"token"`
 	ID    uint   `validate:"required" json:"id"`
-}
-
-type ProxyRemovalResponse struct {
-	Success bool `json:"success"`
 }
 
 func RemoveProxy(c *gin.Context) {
@@ -100,7 +98,56 @@ func RemoveProxy(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &ProxyRemovalResponse{
-		Success: true,
+	backend, ok := backendruntime.RunningBackends[proxy.BackendID]
+
+	if !ok {
+		log.Warnf("Couldn't fetch backend runtime from backend ID #%d", proxy.BackendID)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Couldn't fetch backend runtime",
+		})
+
+		return
+	}
+
+	backend.RuntimeCommands <- &commonbackend.RemoveProxy{
+		Type:       "removeProxy",
+		SourceIP:   proxy.SourceIP,
+		SourcePort: proxy.SourcePort,
+		DestPort:   proxy.DestinationPort,
+		Protocol:   proxy.Protocol,
+	}
+
+	backendResponse := <-backend.RuntimeCommands
+
+	switch responseMessage := backendResponse.(type) {
+	case error:
+		log.Warnf("Failed to get response for backend #%d: %s", proxy.BackendID, responseMessage.Error())
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get response from backend. Proxy was still successfully deleted",
+		})
+
+		return
+	case *commonbackend.ProxyStatusResponse:
+		if responseMessage.IsActive {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to stop proxy. Proxy was still successfully deleted",
+			})
+
+			return
+		}
+	default:
+		log.Errorf("Got illegal response type for backend #%d: %T", proxy.BackendID, responseMessage)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Got invalid response from backend. Proxy was still successfully deleted",
+		})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
 	})
 }

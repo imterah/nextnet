@@ -5,22 +5,14 @@ meta {
 }
 
 post {
-  url: http://127.0.0.1:3000/api/v1/forward/remove
+  url: http://127.0.0.1:8000/api/v1/forward/remove
   body: json
   auth: none
 }
 
 body:json {
   {
-    "token": "f1b89cc337073476289ade17ffbe7a6419b4bd52aa7ede26114bffd76fa263b5cb1bcaf389462e1d9e7acb7f4b6a7c28152a9cc9af83e3ec862f1892b1",
-    "name": "Test Route",
-    "description": "This is a test route for portcopier.",
-    
-    "sourceIP": "127.0.0.1",
-    "sourcePort": "8000",
-    
-    "destinationPort": "9000",
-    
-    "providerID": "1"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiMSJdLCJleHAiOjE3MzUwNzY0MTEsIm5iZiI6MTczNDk5MDAxMSwiaWF0IjoxNzM0OTkwMDExfQ.N9TLraX4peHt7FKv8tPcHuEzL0K7T2IBEw3piQS_4OY",  
+    "id": 1
   }
 }

@@ -19,10 +19,6 @@ type ProxyStopRequest struct {
 	ID    uint   `validate:"required" json:"id"`
 }
 
-type ProxyStopResponse struct {
-	Success bool `json:"success"`
-}
-
 func StopProxy(c *gin.Context) {
 	var req ProxyStopRequest
 
@@ -92,9 +88,19 @@ func StopProxy(c *gin.Context) {
 		return
 	}
 
-	backend := backendruntime.RunningBackends[proxy.BackendID]
+	backend, ok := backendruntime.RunningBackends[proxy.BackendID]
 
-	backend.RuntimeCommands <- commonbackend.RemoveProxy{
+	if !ok {
+		log.Warnf("Couldn't fetch backend runtime from backend ID #%d", proxy.BackendID)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Couldn't fetch backend runtime",
+		})
+
+		return
+	}
+
+	backend.RuntimeCommands <- &commonbackend.RemoveProxy{
 		Type:       "removeProxy",
 		SourceIP:   proxy.SourceIP,
 		SourcePort: proxy.SourcePort,
@@ -102,7 +108,36 @@ func StopProxy(c *gin.Context) {
 		Protocol:   proxy.Protocol,
 	}
 
-	c.JSON(http.StatusOK, &ProxyStopResponse{
-		Success: true,
+	backendResponse := <-backend.RuntimeCommands
+
+	switch responseMessage := backendResponse.(type) {
+	case error:
+		log.Warnf("Failed to get response for backend #%d: %s", proxy.BackendID, responseMessage.Error())
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to get response from backend",
+		})
+
+		return
+	case *commonbackend.ProxyStatusResponse:
+		if responseMessage.IsActive {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to stop proxy",
+			})
+
+			return
+		}
+	default:
+		log.Errorf("Got illegal response type for backend #%d: %T", proxy.BackendID, responseMessage)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Got invalid response from backend. Proxy was still successfully deleted",
+		})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
 	})
 }

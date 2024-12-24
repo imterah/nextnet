@@ -106,33 +106,10 @@ func GetConnections(c *gin.Context) {
 		return
 	}
 
-	var backend dbcore.Backend
-	backendRequest := dbcore.DB.Where("id = ?", proxy.BackendID).First(&backend)
-
-	if backendRequest.Error != nil {
-		log.Warnf("failed to find backend: %s", backendRequest.Error)
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to find backend entry",
-		})
-
-		return
-	}
-
-	backendExists := backendRequest.RowsAffected > 0
-
-	if !backendExists {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "No forward entry found",
-		})
-
-		return
-	}
-
-	backendRuntime, ok := backendruntime.RunningBackends[backend.ID]
+	backendRuntime, ok := backendruntime.RunningBackends[proxy.BackendID]
 
 	if !ok {
-		log.Warnf("Couldn't fetch backend runtime from backend ID #%d", backend.ID)
+		log.Warnf("Couldn't fetch backend runtime from backend ID #%d", proxy.BackendID)
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Couldn't fetch backend runtime",

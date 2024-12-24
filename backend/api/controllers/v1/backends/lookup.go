@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"git.terah.dev/imterah/hermes/api/backendruntime"
 	"git.terah.dev/imterah/hermes/api/dbcore"
 	"git.terah.dev/imterah/hermes/api/jwtcore"
 	"git.terah.dev/imterah/hermes/api/permissions"
@@ -23,12 +24,13 @@ type BackendLookupRequest struct {
 }
 
 type SanitizedBackend struct {
-	Name              string  `json:"name"`
-	BackendID         uint    `json:"id"`
-	OwnerID           uint    `json:"ownerID"`
-	Description       *string `json:"description"`
-	Backend           string  `json:"backend"`
-	BackendParameters *string `json:"connectionDetails"`
+	Name              string   `json:"name"`
+	BackendID         uint     `json:"id"`
+	OwnerID           uint     `json:"ownerID"`
+	Description       *string  `json:"description"`
+	Backend           string   `json:"backend"`
+	BackendParameters *string  `json:"connectionDetails"`
+	Logs              []string `json:"logs"`
 }
 
 type LookupResponse struct {
@@ -121,12 +123,25 @@ func LookupBackend(c *gin.Context) {
 	hasSecretVisibility := permissions.UserHasPermission(user, "backends.secretVis")
 
 	for backendIndex, backend := range backends {
+		foundBackend, ok := backendruntime.RunningBackends[backend.ID]
+
+		if !ok {
+			log.Warnf("Failed to get backend #%d controller", backend.ID)
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to get backends",
+			})
+
+			return
+		}
+
 		sanitizedBackends[backendIndex] = &SanitizedBackend{
 			BackendID:   backend.ID,
 			OwnerID:     backend.UserID,
 			Name:        backend.Name,
 			Description: backend.Description,
 			Backend:     backend.Backend,
+			Logs:        foundBackend.Logs,
 		}
 
 		if backend.UserID == user.ID || hasSecretVisibility {

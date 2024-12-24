@@ -19,23 +19,23 @@ type ProxyLookupRequest struct {
 	Name            *string `json:"name"`
 	Description     *string `json:"description"`
 	Protocol        *string `json:"protocol"`
-	SourceIP        *string `json:"source_ip"`
-	SourcePort      *uint16 `json:"source_port"`
-	DestinationPort *uint16 `json:"destination_port"`
-	ProviderID      *uint   `json:"provider_id"`
-	AutoStart       *bool   `json:"auto_start"`
+	SourceIP        *string `json:"sourceIP"`
+	SourcePort      *uint16 `json:"sourcePort"`
+	DestinationPort *uint16 `json:"destPort"`
+	ProviderID      *uint   `json:"providerID"`
+	AutoStart       *bool   `json:"autoStart"`
 }
 
 type SanitizedProxy struct {
 	Id              uint    `json:"id"`
 	Name            string  `json:"name"`
 	Description     *string `json:"description"`
-	Protcol         string  `json:"protcol"`
-	SourceIP        string  `json:"source_ip"`
-	SourcePort      uint16  `json:"source_port"`
-	DestinationPort uint16  `json:"destination_port"`
-	ProviderID      uint    `json:"provider_id"`
-	AutoStart       bool    `json:"auto_start"`
+	Protcol         string  `json:"protocol"`
+	SourceIP        string  `json:"sourceIP"`
+	SourcePort      uint16  `json:"sourcePort"`
+	DestinationPort uint16  `json:"destPort"`
+	ProviderID      uint    `json:"providerID"`
+	AutoStart       bool    `json:"autoStart"`
 }
 
 type ProxyLookupResponse struct {
@@ -63,6 +63,7 @@ func LookupProxy(c *gin.Context) {
 	}
 
 	user, err := jwtcore.GetUserFromJWT(req.Token)
+
 	if err != nil {
 		if err.Error() == "token is expired" || err.Error() == "user does not exist" {
 			c.JSON(http.StatusForbidden, gin.H{
@@ -89,13 +90,16 @@ func LookupProxy(c *gin.Context) {
 		return
 	}
 
-	if *req.Protcol != "tcp" && *req.Protcol != "udp" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Protocol specified in body must either be 'tcp' or 'udp'",
-		})
+	if req.Protocol != nil {
+		if *req.Protocol != "tcp" && *req.Protocol != "udp" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Protocol specified in body must either be 'tcp' or 'udp'",
+			})
+		}
 	}
 
 	proxies := []dbcore.Proxy{}
+
 	queryString := []string{}
 	queryParameters := []interface{}{}
 
@@ -103,34 +107,42 @@ func LookupProxy(c *gin.Context) {
 		queryString = append(queryString, "id = ?")
 		queryParameters = append(queryParameters, req.Id)
 	}
+
 	if req.Name != nil {
 		queryString = append(queryString, "name = ?")
 		queryParameters = append(queryParameters, req.Name)
 	}
+
 	if req.Description != nil {
 		queryString = append(queryString, "description = ?")
 		queryParameters = append(queryParameters, req.Description)
 	}
+
 	if req.SourceIP != nil {
 		queryString = append(queryString, "name = ?")
 		queryParameters = append(queryParameters, req.Name)
 	}
+
 	if req.SourcePort != nil {
 		queryString = append(queryString, "sourceport = ?")
 		queryParameters = append(queryParameters, req.SourcePort)
 	}
+
 	if req.DestinationPort != nil {
 		queryString = append(queryString, "destinationport = ?")
 		queryParameters = append(queryParameters, req.DestinationPort)
 	}
+
 	if req.ProviderID != nil {
 		queryString = append(queryString, "backendid = ?")
 		queryParameters = append(queryParameters, req.ProviderID)
 	}
+
 	if req.AutoStart != nil {
 		queryString = append(queryString, "autostart = ?")
 		queryParameters = append(queryParameters, req.AutoStart)
 	}
+
 	if req.Protocol != nil {
 		queryString = append(queryString, "protocol = ?")
 		queryParameters = append(queryParameters, req.Protocol)
@@ -140,7 +152,7 @@ func LookupProxy(c *gin.Context) {
 		log.Warnf("failed to get proxies: %s", err.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to get forward rules",
+			"error": "Failed to get proxies",
 		})
 
 		return
@@ -149,15 +161,10 @@ func LookupProxy(c *gin.Context) {
 	sanitizedProxies := make([]*SanitizedProxy, len(proxies))
 
 	for proxyIndex, proxy := range proxies {
-		description := ""
-		if proxy.Description != nil {
-			description = *proxy.Description
-		}
-
 		sanitizedProxies[proxyIndex] = &SanitizedProxy{
 			Id:              proxy.ID,
 			Name:            proxy.Name,
-			Description:     &description,
+			Description:     proxy.Description,
 			Protcol:         proxy.Protocol,
 			SourceIP:        proxy.SourceIP,
 			SourcePort:      proxy.SourcePort,
