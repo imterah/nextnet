@@ -12,8 +12,8 @@ jobs:
       dind:
         image: docker:dind
         options: --privileged --shm-size=2g
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+          - 2375:2375
     permissions:
       packages: write
 
