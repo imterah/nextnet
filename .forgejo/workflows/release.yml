@@ -25,9 +25,14 @@ jobs:
       - name: Build all docker images
         run: |
           docker build ./backend --tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
+          docker build ./sshfrontend --tag git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME
 
       - name: Upload all docker images
         run: |
           docker tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME git.terah.dev/imterah/hermes:latest
           docker push git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
           docker push git.terah.dev/imterah/hermes:latest
+
+          docker tag git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME git.terah.dev/imterah/hermes-lom:latest
+          docker push git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME
+          docker push git.terah.dev/imterah/hermes-lom:latest
