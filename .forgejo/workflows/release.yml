@@ -11,9 +11,8 @@ jobs:
     services:
       dind:
         image: docker:dind
-        options: --privileged
         ports:
-          - 12376:2376
+          - 2376:2376
     permissions:
       packages: write
 
@@ -25,7 +24,7 @@ jobs:
         run: |
           apt update
           apt-get install -y docker.io
-          docker context create forgejo --docker host=tcp://0.0.0.0:12376
+          docker context create forgejo --docker host=tcp://127.0.0.1:2376
           docker context use forgejo
 
       - name: Log in to Forgejo container registry
