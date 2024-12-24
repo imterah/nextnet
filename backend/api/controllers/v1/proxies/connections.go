@@ -37,7 +37,7 @@ type ConnectionsResponse struct {
 	Data    []*SanitizedConnection `json:"data"`
 }
 
-func Connections(c *gin.Context) {
+func GetConnections(c *gin.Context) {
 	var req ConnectionsRequest
 
 	if err := c.BindJSON(&req); err != nil {
