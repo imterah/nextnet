@@ -97,7 +97,7 @@ func LookupUser(c *gin.Context) {
 	}
 
 	if req.IsBot != nil {
-		queryString = append(queryString, "isbot = ?")
+		queryString = append(queryString, "is_bot = ?")
 		queryParameters = append(queryParameters, req.IsBot)
 	}
 

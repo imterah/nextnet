@@ -105,7 +105,7 @@ func LookupBackend(c *gin.Context) {
 	}
 
 	if req.Backend != nil {
-		queryString = append(queryString, "isbot = ?")
+		queryString = append(queryString, "is_bot = ?")
 		queryParameters = append(queryParameters, req.Backend)
 	}
 

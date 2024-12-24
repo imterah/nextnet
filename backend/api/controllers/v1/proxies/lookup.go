@@ -124,22 +124,22 @@ func LookupProxy(c *gin.Context) {
 	}
 
 	if req.SourcePort != nil {
-		queryString = append(queryString, "sourceport = ?")
+		queryString = append(queryString, "source_port = ?")
 		queryParameters = append(queryParameters, req.SourcePort)
 	}
 
 	if req.DestinationPort != nil {
-		queryString = append(queryString, "destinationport = ?")
+		queryString = append(queryString, "destination_port = ?")
 		queryParameters = append(queryParameters, req.DestinationPort)
 	}
 
 	if req.ProviderID != nil {
-		queryString = append(queryString, "backendid = ?")
+		queryString = append(queryString, "backend_id = ?")
 		queryParameters = append(queryParameters, req.ProviderID)
 	}
 
 	if req.AutoStart != nil {
-		queryString = append(queryString, "autostart = ?")
+		queryString = append(queryString, "auto_start = ?")
 		queryParameters = append(queryParameters, req.AutoStart)
 	}
 

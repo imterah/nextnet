@@ -152,6 +152,43 @@ func entrypoint(cCtx *cli.Context) error {
 		}
 
 		backendruntime.RunningBackends[backend.ID] = backendInstance
+
+		log.Infof("Successfully initialized backend #%d", backend.ID)
+
+		autoStartProxies := []dbcore.Proxy{}
+
+		if err := dbcore.DB.Where("backend_id = ? AND auto_start = true", backend.ID).Find(&autoStartProxies).Error; err != nil {
+			log.Errorf("Failed to query proxies to autostart: %s", err.Error())
+			continue
+		}
+
+		for _, proxy := range autoStartProxies {
+			log.Infof("Starting up route #%d for backend #%d: %s", proxy.ID, backend.ID, proxy.Name)
+
+			backendInstance.RuntimeCommands <- &commonbackend.AddProxy{
+				Type:       "addProxy",
+				SourceIP:   proxy.SourceIP,
+				SourcePort: proxy.SourcePort,
+				DestPort:   proxy.DestinationPort,
+				Protocol:   proxy.Protocol,
+			}
+
+			backendResponse := <-backendInstance.RuntimeCommands
+
+			switch responseMessage := backendResponse.(type) {
+			case error:
+				log.Errorf("Failed to get response for backend #%d and route #%d: %s", proxy.BackendID, proxy.ID, responseMessage.Error())
+				continue
+			case *commonbackend.ProxyStatusResponse:
+				if !responseMessage.IsActive {
+					log.Warnf("Failed to start proxy for backend #%d and route #%d", proxy.BackendID, proxy.ID)
+				}
+			default:
+				log.Errorf("Got illegal response type for backend #%d and proxy #%d: %T", proxy.BackendID, proxy.ID, responseMessage)
+				continue
+			}
+		}
+
 		log.Infof("Successfully started backend #%d", backend.ID)
 	}
 
