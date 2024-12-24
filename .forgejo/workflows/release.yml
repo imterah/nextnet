@@ -15,6 +15,9 @@ jobs:
       - name: Checkout code using Git
         uses: actions/checkout@main
 
+      - name: Install Docker
+        run: curl -fsSL https://get.docker.com | sh
+
       - name: Log in to Forgejo container registry
         uses: https://github.com/docker/login-action@v3
         with:
