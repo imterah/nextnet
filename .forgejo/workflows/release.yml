@@ -11,6 +11,8 @@ jobs:
     services:
       dind:
         image: docker:dind
+        env:
+          DOCKER_TLS_CERTDIR: ""
     permissions:
       packages: write
 
