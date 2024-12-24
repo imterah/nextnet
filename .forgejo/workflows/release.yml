@@ -8,8 +8,6 @@ on:
 jobs:
   build:
     runs-on: docker
-    container:
-      image: debian:bookworm-slim
     services:
       dind:
         image: docker:dind
