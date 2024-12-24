@@ -1,4 +1,4 @@
-package forward
+package proxies
 
 import (
 	"fmt"

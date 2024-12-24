@@ -11,6 +11,7 @@ import (
 
 	"git.terah.dev/imterah/hermes/api/backendruntime"
 	"git.terah.dev/imterah/hermes/api/controllers/v1/backends"
+	"git.terah.dev/imterah/hermes/api/controllers/v1/proxies"
 	"git.terah.dev/imterah/hermes/api/controllers/v1/users"
 	"git.terah.dev/imterah/hermes/api/dbcore"
 	"git.terah.dev/imterah/hermes/api/jwtcore"
@@ -194,6 +195,12 @@ func entrypoint(cCtx *cli.Context) error {
 	engine.POST("/api/v1/backends/create", backends.CreateBackend)
 	engine.POST("/api/v1/backends/remove", backends.RemoveBackend)
 	engine.POST("/api/v1/backends/lookup", backends.LookupBackend)
+
+	engine.POST("/api/v1/forward/create", proxies.CreateProxy)
+	engine.POST("/api/v1/forward/lookup", proxies.LookupProxy)
+	engine.POST("/api/v1/forward/remove", proxies.RemoveProxy)
+	engine.POST("/api/v1/forward/start", proxies.StartProxy)
+	engine.POST("/api/v1/forward/stop", proxies.StopProxy)
 
 	log.Infof("Listening on '%s'", listeningAddress)
 	err = engine.Run(listeningAddress)
