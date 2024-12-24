@@ -24,7 +24,7 @@ jobs:
         run: |
           apt update
           apt-get install -y docker.io
-          docker context create forgejo --docker host=tcp://dind:2376
+          docker context create forgejo --docker host=tcp://dind:2375
           docker context use forgejo
 
       - name: Build Docker images
