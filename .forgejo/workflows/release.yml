@@ -1,0 +1,33 @@
+name: Release code
+
+on:
+  push:
+    tags:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Checkout code using Git
+        uses: actions/checkout@main
+
+      - name: Log in to Forgejo container registry
+        uses: https://github.com/docker/login-action@v3
+        with:
+          registry: git.terah.dev
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Build all docker images
+        run: |
+          docker build ./backend --tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
+
+      - name: Upload all docker images
+        run: |
+          docker tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME git.terah.dev/imterah/hermes:latest
+          docker push git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
+          docker push git.terah.dev/imterah/hermes:latest
