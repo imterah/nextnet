@@ -1,0 +1,6 @@
+[
+  {
+    "name": "ssh",
+    "path": "./sshbackend"
+  }
+]

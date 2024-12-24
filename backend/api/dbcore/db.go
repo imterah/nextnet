@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -83,6 +84,14 @@ func InitializeDatabaseDialector() (gorm.Dialector, error) {
 		}
 
 		return sqlite.Open(filePath), nil
+	case "postgresql":
+		postgresDSN := os.Getenv("HERMES_POSTGRES_DSN")
+
+		if postgresDSN == "" {
+			return nil, fmt.Errorf("postgres DSN not specified (missing HERMES_POSTGRES_DSN)")
+		}
+
+		return postgres.Open(postgresDSN), nil
 	case "":
 		return nil, fmt.Errorf("no database backend specified in environment variables (missing HERMES_DATABASE_BACKEND)")
 	default:
