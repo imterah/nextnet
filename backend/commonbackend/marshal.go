@@ -206,6 +206,10 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 			totalSize += len(connectionsArray[connIndex]) + 1
 		}
 
+		if totalSize == 0 {
+			totalSize = 1
+		}
+
 		connectionCommandArray := make([]byte, totalSize+1)
 		connectionCommandArray[0] = ProxyConnectionsResponseID
 
@@ -463,6 +467,10 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 			totalSize += len(proxyArray[proxyIndex]) + 1
 		}
 
+		if totalSize == 0 {
+			totalSize = 1
+		}
+
 		connectionCommandArray := make([]byte, totalSize+1)
 		connectionCommandArray[0] = ProxyInstanceResponseID
 
@@ -475,6 +483,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 		}
 
 		connectionCommandArray[totalSize] = '\n'
+
 		return connectionCommandArray, nil
 	case "proxyInstanceRequest":
 		_, ok := command.(*ProxyInstanceRequest)

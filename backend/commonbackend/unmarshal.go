@@ -20,6 +20,8 @@ func unmarshalIndividualConnectionStruct(conn io.Reader) (*ProxyClientConnection
 		serverIPSize = IPv4Size
 	} else if serverIPVersion[0] == 6 {
 		serverIPSize = IPv6Size
+	} else if serverIPVersion[0] == '\n' {
+		return nil, fmt.Errorf("no data found")
 	} else {
 		return nil, fmt.Errorf("invalid server IP version recieved")
 	}
@@ -92,6 +94,8 @@ func unmarshalIndividualProxyStruct(conn io.Reader) (*ProxyInstance, error) {
 		ipSize = IPv4Size
 	} else if ipVersion[0] == 6 {
 		ipSize = IPv6Size
+	} else if ipVersion[0] == '\n' {
+		return nil, fmt.Errorf("no data found")
 	} else {
 		return nil, fmt.Errorf("invalid IP version recieved")
 	}
@@ -293,6 +297,10 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			connection, err := unmarshalIndividualConnectionStruct(conn)
 
 			if err != nil {
+				if err.Error() == "no data found" {
+					break
+				}
+
 				return "", nil, err
 			}
 
@@ -619,6 +627,10 @@ func Unmarshal(conn io.Reader) (string, interface{}, error) {
 			proxy, err := unmarshalIndividualProxyStruct(conn)
 
 			if err != nil {
+				if err.Error() == "no data found" {
+					break
+				}
+
 				return "", nil, err
 			}
 
