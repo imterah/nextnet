@@ -8,6 +8,14 @@ on:
 jobs:
   build:
     runs-on: docker
+    container:
+      image: debian:bookworm-slim
+    services:
+      dind:
+        image: docker:dind
+        options: --privileged --shm-size=2g
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
     permissions:
       packages: write
 
@@ -16,7 +24,9 @@ jobs:
         uses: actions/checkout@main
 
       - name: Install Docker
-        run: curl -fsSL https://get.docker.com | sh
+        run: |
+          apt update
+           apt-get install -y docker.io
 
       - name: Log in to Forgejo container registry
         uses: https://github.com/docker/login-action@v3
