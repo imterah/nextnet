@@ -10,7 +10,7 @@ jobs:
     runs-on: docker
     services:
       dind:
-        image: docker:dind-rootless
+        image: docker:dind
         options: --privileged
         ports:
           - 12375:2375
