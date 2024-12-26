@@ -29,8 +29,8 @@ jobs:
         uses: https://github.com/docker/login-action@v3
         with:
           registry: git.terah.dev
-          username: ${{github.actor}}
-          password: ${{secrets.GITHUB_TOKEN}}
+          username: imterah
+          password: ${{secrets.ACTIONS_PACKAGES_DEPL_KEY}}
 
       - name: Build Docker images
         run: |
