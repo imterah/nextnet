@@ -22,7 +22,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func entrypoint(cCtx *cli.Context) error {
+func apiEntrypoint(cCtx *cli.Context) error {
 	developmentMode := false
 
 	if os.Getenv("HERMES_DEVELOPMENT_MODE") != "" {
@@ -275,6 +275,22 @@ func main() {
 	app := &cli.App{
 		Name:  "hermes",
 		Usage: "port forwarding across boundaries",
+		Commands: []*cli.Command{
+			{
+				Name:    "import",
+				Usage:   "imports from legacy NextNet/Hermes source",
+				Aliases: []string{"i"},
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "backup-path",
+						Aliases:  []string{"bp"},
+						Usage:    "path to the backup file",
+						Required: true,
+					},
+				},
+				Action: backupRestoreEntrypoint,
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "backends-path",
@@ -283,7 +299,7 @@ func main() {
 				Required: true,
 			},
 		},
-		Action: entrypoint,
+		Action: apiEntrypoint,
 	}
 
 	if err := app.Run(os.Args); err != nil {

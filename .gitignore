@@ -4,6 +4,9 @@ backend/dummybackend/dummybackend
 backend/externalbackendlauncher/externalbackendlauncher
 backend/api/api
 
+# Backup artifacts
+*.json.gz
+
 # LOM
 sshfrontend/keys
 

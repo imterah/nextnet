@@ -34,6 +34,7 @@ const masterList = JSON.stringify({
   destinationProviders,
   forwardRules,
   allPermissions,
+  users,
 });
 
 const source = new Readable();

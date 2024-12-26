@@ -22,7 +22,7 @@ func TestStartCommandMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -65,7 +65,7 @@ func TestStopCommandMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -108,7 +108,7 @@ func TestAddConnectionCommandMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -167,7 +167,7 @@ func TestRemoveConnectionCommandMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
@@ -249,7 +249,7 @@ func TestGetAllConnectionsCommandMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
@@ -321,7 +321,7 @@ func TestCheckClientParametersMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
@@ -385,7 +385,7 @@ func TestCheckServerParametersMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -427,7 +427,7 @@ func TestCheckParametersResponseMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
@@ -485,7 +485,7 @@ func TestBackendStatusRequestMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -527,7 +527,7 @@ func TestBackendStatusResponseMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -581,7 +581,7 @@ func TestProxyStatusRequestMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
@@ -645,7 +645,7 @@ func TestProxyStatusResponseMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
@@ -713,7 +713,7 @@ func TestProxyConnectionRequestMarshalSupport(t *testing.T) {
 	}
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	buf := bytes.NewBuffer(commandMarshalled)
@@ -768,7 +768,7 @@ func TestProxyConnectionResponseMarshalSupport(t *testing.T) {
 	commandMarshalled, err := Marshal(commandInput.Type, commandInput)
 
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	if logLevel == "debug" {
