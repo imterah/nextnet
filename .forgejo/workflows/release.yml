@@ -28,27 +28,27 @@ jobs:
       - name: Log in to our container registry
         uses: https://github.com/docker/login-action@v3
         with:
-          registry: git.terah.dev
+          registry: ghcr.io
           username: imterah
           password: ${{secrets.ACTIONS_PACKAGES_DEPL_KEY}}
 
       - name: Build Docker images
         run: |
-          docker build ./backend --tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
-          docker build -t git.terah.dev/imterah/hermes-backend-migration:$GITHUB_REF_NAME -f MigrationDockerfile .
+          docker build ./backend --tag ghcr.io/imterah/hermes:$GITHUB_REF_NAME
+          docker build -t ghcr.io/imterah/hermes-backend-migration:$GITHUB_REF_NAME -f MigrationDockerfile .
 
-          docker build ./sshfrontend --tag git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME
+          docker build ./sshfrontend --tag ghcr.io/imterah/hermes-lom:$GITHUB_REF_NAME
 
       - name: Upload all Docker images
         run: |
-          docker tag git.terah.dev/imterah/hermes:$GITHUB_REF_NAME git.terah.dev/imterah/hermes:latest
-          docker push git.terah.dev/imterah/hermes:$GITHUB_REF_NAME
-          docker push git.terah.dev/imterah/hermes:latest
+          docker tag ghcr.io/imterah/hermes:$GITHUB_REF_NAME ghcr.io/imterah/hermes:latest
+          docker push ghcr.io/imterah/hermes:$GITHUB_REF_NAME
+          docker push ghcr.io/imterah/hermes:latest
 
-          docker tag git.terah.dev/imterah/hermes-backend-migration:$GITHUB_REF_NAME git.terah.dev/imterah/hermes-backend-migration:latest
-          docker push git.terah.dev/imterah/hermes-backend-migration:$GITHUB_REF_NAME
-          docker push git.terah.dev/imterah/hermes-backend-migration:latest
+          docker tag ghcr.io/imterah/hermes-backend-migration:$GITHUB_REF_NAME ghcr.io/imterah/hermes-backend-migration:latest
+          docker push ghcr.io/imterah/hermes-backend-migration:$GITHUB_REF_NAME
+          docker push ghcr.io/imterah/hermes-backend-migration:latest
 
-          docker tag git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME git.terah.dev/imterah/hermes-lom:latest
-          docker push git.terah.dev/imterah/hermes-lom:$GITHUB_REF_NAME
-          docker push git.terah.dev/imterah/hermes-lom:latest
+          docker tag ghcr.io/imterah/hermes-lom:$GITHUB_REF_NAME ghcr.io/imterah/hermes-lom:latest
+          docker push ghcr.io/imterah/hermes-lom:$GITHUB_REF_NAME
+          docker push ghcr.io/imterah/hermes-lom:latest
