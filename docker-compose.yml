@@ -1,7 +1,7 @@
 services:
   api:
-    image: ghcr.io/greysoh/nextnet:latest
-    container_name: nextnet-api
+    image: ghcr.io/imterah/hermes:latest
+    container_name: hermes-api
     restart: always
     env_file:
       - .env
@@ -10,11 +10,13 @@ services:
     ports:
       - 3000:3000
 
+  # WARN: The LOM is deprecated and likely broken currently.
+  #
   # NOTE: For this to work correctly, the nextnet-api must be version > 0.1.1
   # or have a version with backported username support, incl. logins
   lom:
-    image: ghcr.io/greysoh/nextnet-lom:latest
-    container_name: nextnet-lom
+    image: ghcr.io/imterah/hermes-lom:latest
+    container_name: hermes-lom
     restart: always
     ports:
       - 2222:2222
