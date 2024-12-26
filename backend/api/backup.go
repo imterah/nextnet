@@ -174,7 +174,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 
 		log.Info("Dropping database...")
 
-		_, err = db.Query(context.Background(), "DROP DATABASE ?", postgresDB)
+		_, err = db.Query(context.Background(), "DROP DATABASE $1", postgresDB)
 
 		if err != nil {
 			return fmt.Errorf("failed to drop database: %s", err.Error())
