@@ -2,7 +2,7 @@ package main
 
 import (
 	"compress/gzip"
-	"database/sql"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"git.terah.dev/imterah/hermes/api/dbcore"
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator/v10"
-	_ "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/urfave/cli/v2"
 	"gorm.io/gorm"
 )
@@ -166,7 +166,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 
 		log.Info("Connecting to database...")
 
-		db, err := sql.Open("postgres", postgresDSN)
+		db, err := pgx.Connect(context.Background(), postgresDSN)
 
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %s", err.Error())
@@ -174,7 +174,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 
 		log.Info("Dropping database...")
 
-		_, err = db.Query("DROP DATABASE ?", postgresDB)
+		_, err = db.Query(context.Background(), "DROP DATABASE ?", postgresDB)
 
 		if err != nil {
 			return fmt.Errorf("failed to drop database: %s", err.Error())
@@ -182,7 +182,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 
 		log.Info("Closing database connection...")
 
-		err = db.Close()
+		err = db.Close(context.Background())
 
 		if err != nil {
 			return fmt.Errorf("failed to close database connection: %s", err.Error())
