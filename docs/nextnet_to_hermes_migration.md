@@ -28,7 +28,7 @@ Below are new environment variables that may need to be set up:
 6. Go get the container logs, and make sure no errors get output to the console.
 7. Copy the backup as instructed in the log file.
 8. DO NOT RESTART THE CONTAINER IF SUCCESSFUL. YOU WILL LOSE ALL YOUR DATA. If the migration fails, follow the steps mentioned in the logs. You do not need to copy the DB backup if it failed to connect or read the database.
-9. If successful, remove the environment variable `HERMES_MIGRATE_POSTGRES_DATABASE`.
+9. If successful, remove the environment variables `HERMES_MIGRATE_POSTGRES_DATABASE` and `DATABASE_URL`.
 10. Switch the API docker image from `ghcr.io/imterah/hermes-backend-migration:latest` to `ghcr.io/imterah/hermes:latest`.
 11. Start the backend.
 ## Failed Migration / Manual Restoration Steps

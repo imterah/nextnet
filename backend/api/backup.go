@@ -3,7 +3,6 @@ package main
 import (
 	"compress/gzip"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -223,18 +222,11 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 			username = *user.Username
 		}
 
-		bcryptPassword, err := hex.DecodeString(user.Password)
-
-		if err != nil {
-			log.Errorf("Failed to decode hex encoded password: %s", err.Error())
-			continue
-		}
-
 		userDatabase := &dbcore.User{
 			Email:    user.Email,
 			Username: username,
 			Name:     user.Name,
-			Password: base64.StdEncoding.EncodeToString(bcryptPassword),
+			Password: base64.StdEncoding.EncodeToString([]byte(user.Password)),
 			IsBot:    user.IsBot,
 
 			Tokens:      tokens,
