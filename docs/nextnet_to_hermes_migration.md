@@ -17,10 +17,11 @@ Below are new environment variables that may need to be set up:
 ## Migration steps
 1. Remove all old environment variables.
 2. Add these variables:
-  - `HERMES_MIGRATE_POSTGRES_DATABASE` -> `$POSTGRES_DB`
+  - `HERMES_MIGRATE_POSTGRES_DATABASE` -> `${POSTGRES_DB}`
   - `HERMES_DATABASE_BACKEND` -> `postgresql`
-  - `HERMES_POSTGRES_DSN` -> `postgres://$POSTGRES_USERNAME:$POSTGRES_PASSWORD@nextnet-postgres:5432/$POSTGRES_DB`
-  - `DATABASE_URL` -> `postgresql://$POSTGRES_USERNAME:$POSTGRES_PASSWORD@nextnet-postgres:5432/$POSTGRES_DB?schema=nextnet`
+  - `HERMES_POSTGRES_DSN` -> `postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@nextnet-postgres:5432/${POSTGRES_DB}`
+  - `DATABASE_URL` -> `postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@nextnet-postgres:5432/${POSTGRES_DB}?schema=nextnet`
+  - `HERMES_JWT_SECRET` -> Random data (recommended to use `head -c 500 /dev/random | sha512sum | cut -d " " -f 1` to seed the data)
 3. Switch the API docker image from `ghcr.io/imterah/nextnet:latest` to `ghcr.io/imterah/hermes-backend-migration:latest`
 4. Change the exposed ports from `3000:3000` to `3000:8000`.
 5. Start the Docker compose stack.

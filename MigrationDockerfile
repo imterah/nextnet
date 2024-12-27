@@ -11,6 +11,8 @@ COPY backend-legacy/tsconfig.json /app/legacy/
 COPY backend-legacy/package.json /app/legacy/
 COPY backend-legacy/package-lock.json /app/legacy/
 WORKDIR /app/legacy
+RUN apt update
+RUN apt install postgresql -y
 RUN npm install --save-dev
 RUN npm run build
 RUN rm out/**/*.ts out/**/*.map

@@ -2,19 +2,15 @@ package main
 
 import (
 	"compress/gzip"
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"git.terah.dev/imterah/hermes/api/dbcore"
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5"
 	"github.com/urfave/cli/v2"
 	"gorm.io/gorm"
 )
@@ -93,10 +89,15 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 	}
 
 	reader, err := gzip.NewReader(backupFile)
+
+	if err != nil {
+		return fmt.Errorf("failed to initialize Gzip (compression) reader: %s", err.Error())
+	}
+
 	backupDataBytes, err := io.ReadAll(reader)
 
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to read backup contents: %s", err.Error())
 	}
 
 	log.Info("Decompressed backup. Cleaning up...")
@@ -127,73 +128,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 		return fmt.Errorf("failed to validate backup: %s", err.Error())
 	}
 
-	log.Warn("!! WARNING !!")
-	log.Warn("This will attempt to permanently wipe the old database. The backup will not be deleted, however, caution is still advised.")
-	log.Warn("Continuing in 5 seconds...")
-
-	time.Sleep(5 * time.Second)
-
-	log.Info("Wiping database...")
-
-	databaseBackend := os.Getenv("HERMES_DATABASE_BACKEND")
-
-	switch databaseBackend {
-	case "sqlite":
-		filePath := os.Getenv("HERMES_SQLITE_FILEPATH")
-
-		if filePath == "" {
-			return fmt.Errorf("sqlite database file not specified (missing HERMES_SQLITE_FILEPATH)")
-		}
-
-		err := os.Remove(filePath)
-
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("failed to delete sqlite database: %s", err.Error())
-		}
-	case "postgresql":
-		// FIXME(imterah): Maybe make this not required?
-		postgresDB := os.Getenv("HERMES_MIGRATE_POSTGRES_DATABASE")
-
-		if postgresDB == "" {
-			return fmt.Errorf("postgres migration DB is not specified (we don't parse the DSN to save space) (missing HERMES_MIGRATE_POSTGRES_DATABASE)")
-		}
-
-		postgresDSN := os.Getenv("HERMES_POSTGRES_DSN")
-
-		if postgresDSN == "" {
-			return fmt.Errorf("postgres DSN not specified (missing HERMES_POSTGRES_DSN)")
-		}
-
-		log.Info("Connecting to database...")
-
-		db, err := pgx.Connect(context.Background(), postgresDSN)
-
-		if err != nil {
-			return fmt.Errorf("failed to connect to database: %s", err.Error())
-		}
-
-		log.Info("Dropping database...")
-
-		_, err = db.Query(context.Background(), fmt.Sprintf("DROP DATABASE %s", pgx.Identifier{postgresDB}.Sanitize()))
-
-		if err != nil {
-			return fmt.Errorf("failed to drop database: %s", err.Error())
-		}
-
-		log.Info("Closing database connection...")
-
-		err = db.Close(context.Background())
-
-		if err != nil {
-			return fmt.Errorf("failed to close database connection: %s", err.Error())
-		}
-	case "":
-		return fmt.Errorf("no database backend specified in environment variables (missing HERMES_DATABASE_BACKEND)")
-	default:
-		return fmt.Errorf("unknown database backend specified: %s", os.Getenv(databaseBackend))
-	}
-
-	log.Info("Reinitializing database and opening it...")
+	log.Info("Initializing database and opening it...")
 
 	err = dbcore.InitializeDatabase(&gorm.Config{})
 
@@ -254,7 +189,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 	var bestEffortOwnerUID uint
 
 	for _, user := range backupData.Users {
-		log.Debugf("Migrating user with email '%s' and ID of '%d'", user.Email, user.ID)
+		log.Infof("Migrating user with email '%s' and ID of '%d'", user.Email, user.ID)
 		tokens := make([]dbcore.Token, 0)
 		permissions := make([]dbcore.Permission, 0)
 
@@ -307,7 +242,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 	}
 
 	for _, backend := range backupData.Backends {
-		log.Debugf("Migrating backend ID '%d' with name '%s'", backend.ID, backend.Name)
+		log.Infof("Migrating backend ID '%d' with name '%s'", backend.ID, backend.Name)
 
 		backendDatabase := &dbcore.Backend{
 			UserID:            bestEffortOwnerUID,
@@ -321,14 +256,14 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 			log.Errorf("Failed to create backend: %s", err.Error())
 		}
 
-		log.Debugf("Migrating proxies for backend ID '%d'", backend.ID)
+		log.Infof("Migrating proxies for backend ID '%d'", backend.ID)
 
 		for _, proxy := range backupData.Proxies {
 			if proxy.BackendID != backend.ID {
 				continue
 			}
 
-			log.Debugf("Migrating proxy ID '%d' with name '%s'", proxy.ID, proxy.Name)
+			log.Infof("Migrating proxy ID '%d' with name '%s'", proxy.ID, proxy.Name)
 
 			proxyDatabase := &dbcore.Proxy{
 				BackendID: backendDatabase.ID,
