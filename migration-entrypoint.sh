@@ -29,7 +29,7 @@ CREATE DATABASE $HERMES_MIGRATE_POSTGRES_DATABASE;
 \c nextnet
 DROP DATABASE temp;
 EOF
-psql "$HERMES_POSTGRES_DATABASE" < /tmp/wipe.sql
+psql "$HERMES_POSTGRES_DSN" < /tmp/wipe.sql
 rm -rf /tmp/wipe.sql
 echo "Restoring backup..."
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -249,7 +250,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 			Name:              backend.Name,
 			Description:       backend.Description,
 			Backend:           backend.Backend,
-			BackendParameters: backend.BackendParameters,
+			BackendParameters: base64.StdEncoding.EncodeToString([]byte(backend.BackendParameters)),
 		}
 
 		if err := dbcore.DB.Create(backendDatabase).Error; err != nil {

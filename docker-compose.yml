@@ -3,8 +3,10 @@ services:
     image: ghcr.io/imterah/hermes:latest
     container_name: hermes-api
     restart: always
-    env_file:
-      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@nextnet-postgres:5432/${POSTGRES_DB}?schema=nextnet
+      HERMES_POSTGRES_DSN: postgres://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@nextnet-postgres:5432/${POSTGRES_DB}
+      HERMES_DATABASE_BACKEND: postgresql
     depends_on:
       - db
     ports:
