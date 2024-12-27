@@ -65,7 +65,7 @@ func LoginUser(c *gin.Context) {
 	userRequest := dbcore.DB.Where(userFindRequest, userFindRequestArguments...).Find(&user)
 
 	if userRequest.Error != nil {
-		log.Warnf("failed to find if user exists or not: %s", userRequest.Error)
+		log.Warnf("failed to find if user exists or not: %s", userRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find if user exists",
@@ -88,7 +88,7 @@ func LoginUser(c *gin.Context) {
 	_, err := base64.StdEncoding.Decode(decodedPassword, []byte(user.Password))
 
 	if err != nil {
-		log.Warnf("failed to decode password in database: %s", userRequest.Error)
+		log.Warnf("failed to decode password in database: %s", err.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to parse database result for password",

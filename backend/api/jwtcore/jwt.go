@@ -77,7 +77,7 @@ func GetUserFromJWT(token string) (*dbcore.User, error) {
 	userRequest := dbcore.DB.Preload("Permissions").Where("id = ?", uint(uid)).Find(&user)
 
 	if userRequest.Error != nil {
-		return user, fmt.Errorf("failed to find if user exists or not: %s", userRequest.Error)
+		return user, fmt.Errorf("failed to find if user exists or not: %s", userRequest.Error.Error())
 	}
 
 	userExists := userRequest.RowsAffected > 0

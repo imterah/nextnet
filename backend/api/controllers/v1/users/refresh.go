@@ -39,7 +39,7 @@ func RefreshUserToken(c *gin.Context) {
 	tokenRequest := dbcore.DB.Where("token = ?", req.Token).Find(&tokenInDatabase)
 
 	if tokenRequest.Error != nil {
-		log.Warnf("failed to find if token exists or not: %s", tokenRequest.Error)
+		log.Warnf("failed to find if token exists or not: %s", tokenRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find if token exists",
@@ -79,7 +79,7 @@ func RefreshUserToken(c *gin.Context) {
 	userRequest := dbcore.DB.Where("id = ?", tokenInDatabase.UserID).Find(&user)
 
 	if tokenRequest.Error != nil {
-		log.Warnf("failed to find if token user or not: %s", userRequest.Error)
+		log.Warnf("failed to find if token user or not: %s", userRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find user",

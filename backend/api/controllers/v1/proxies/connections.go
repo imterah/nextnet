@@ -87,7 +87,7 @@ func GetConnections(c *gin.Context) {
 	proxyRequest := dbcore.DB.Where("id = ?", req.Id).First(&proxy)
 
 	if proxyRequest.Error != nil {
-		log.Warnf("failed to find proxy: %s", proxyRequest.Error)
+		log.Warnf("failed to find proxy: %s", proxyRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find forward entry",

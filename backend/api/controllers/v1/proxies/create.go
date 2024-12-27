@@ -84,7 +84,7 @@ func CreateProxy(c *gin.Context) {
 	backendRequest := dbcore.DB.Where("id = ?", req.ProviderID).First(&backend)
 
 	if backendRequest.Error != nil {
-		log.Warnf("failed to find if backend exists or not: %s", backendRequest.Error)
+		log.Warnf("failed to find if backend exists or not: %s", backendRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find if backend exists",

@@ -3,6 +3,7 @@ package main
 import (
 	"compress/gzip"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -222,11 +223,18 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 			username = *user.Username
 		}
 
+		bcryptPassword, err := hex.DecodeString(user.Password)
+
+		if err != nil {
+			log.Errorf("Failed to decode hex encoded password: %s", err.Error())
+			continue
+		}
+
 		userDatabase := &dbcore.User{
 			Email:    user.Email,
 			Username: username,
 			Name:     user.Name,
-			Password: user.Password,
+			Password: base64.StdEncoding.EncodeToString(bcryptPassword),
 			IsBot:    user.IsBot,
 
 			Tokens:      tokens,
@@ -235,6 +243,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 
 		if err := dbcore.DB.Create(userDatabase).Error; err != nil {
 			log.Errorf("Failed to create user: %s", err.Error())
+			continue
 		}
 
 		if uint(bestEffortOwnerUIDFromBackup) == user.ID {
@@ -255,6 +264,7 @@ func backupRestoreEntrypoint(cCtx *cli.Context) error {
 
 		if err := dbcore.DB.Create(backendDatabase).Error; err != nil {
 			log.Errorf("Failed to create backend: %s", err.Error())
+			continue
 		}
 
 		log.Infof("Migrating proxies for backend ID '%d'", backend.ID)

@@ -31,3 +31,13 @@ Below are new environment variables that may need to be set up:
 9. If successful, remove the environment variable `HERMES_MIGRATE_POSTGRES_DATABASE`.
 10. Switch the API docker image from `ghcr.io/imterah/hermes-backend-migration:latest` to `ghcr.io/imterah/hermes:latest`.
 11. Start the backend.
+## Failed Migration / Manual Restoration Steps
+1. Get to step 4 in the ordinary migration setps.
+2. Add the `entrypoint` option in the API compose section, and set it to `/bin/bash`
+3. Add the `command` option in the API compose section, and set it to `"-c 'sleep 10000'"`
+4. Get a shell in the container (likely named `nextnet-api`): `docker exec -it nextnet-api /bin/bash`
+5. Copy the base64 section (excluding the `BEGIN` and `END` portions) of the backup, and run the following command to begin the transfer: `cat >> /tmp/db.json.gz.b64 << EOF`
+6. Paste in the base64 data, and then press enter, type `EOF`, and then press enter again. This should return you to the shell prompt.
+7. Decode the base64 backup: `cat /tmp/db.json.gz.b64 | base64 -d > /tmp/db.json.gz`
+8. Run the migration script: `./entrypoint.sh`
+9. When done, remove the `entrypoint` and `command` sections, and then jump to step 9 in the ordinary migration steps.

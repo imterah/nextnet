@@ -59,7 +59,7 @@ func CreateUser(c *gin.Context) {
 	userRequest := dbcore.DB.Where("email = ? OR username = ?", req.Email, req.Username).Find(&user)
 
 	if userRequest.Error != nil {
-		log.Warnf("failed to find if user exists or not: %s", userRequest.Error)
+		log.Warnf("failed to find if user exists or not: %s", userRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find if user exists",

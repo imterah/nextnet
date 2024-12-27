@@ -69,7 +69,7 @@ func StopProxy(c *gin.Context) {
 	proxyRequest := dbcore.DB.Where("id = ?", req.ID).Find(&proxy)
 
 	if proxyRequest.Error != nil {
-		log.Warnf("failed to find if proxy exists or not: %s", proxyRequest.Error)
+		log.Warnf("failed to find if proxy exists or not: %s", proxyRequest.Error.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to find if forward rule exists",
