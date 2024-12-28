@@ -9,6 +9,8 @@
   ];
 
   shellHook = ''
-    source init.sh
+    if [ -f init.sh ]; then
+      source init.sh
+    fi
   '';
 }
