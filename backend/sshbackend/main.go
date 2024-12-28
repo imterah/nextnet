@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"git.terah.dev/imterah/hermes/backendutil"
-	"git.terah.dev/imterah/hermes/commonbackend"
+	"git.terah.dev/imterah/hermes/backend/backendutil"
+	"git.terah.dev/imterah/hermes/backend/commonbackend"
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/ssh"

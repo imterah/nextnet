@@ -40,7 +40,7 @@ echo "Restored backup. If this restore fails after the database has wiped, get a
 echo "copy the backup contents into the container (base64 decoded) at '/tmp/db.json.gz',"
 echo "and rerun /app/entrypoint.sh."
 echo ""
-echo "If further issues continue, open an issue at 'https://git.terah.dev/imterah/hermes'."
+echo "If further issues continue, open an issue at 'https://git.terah.dev/imterah/hermes/backend'."
 echo "If the migration succeeded, congratulations!"
 
 sleep 10000

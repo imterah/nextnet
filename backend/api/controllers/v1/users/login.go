@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"git.terah.dev/imterah/hermes/api/dbcore"
-	"git.terah.dev/imterah/hermes/api/jwtcore"
+	"git.terah.dev/imterah/hermes/backend/api/dbcore"
+	"git.terah.dev/imterah/hermes/backend/api/jwtcore"
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

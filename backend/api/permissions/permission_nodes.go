@@ -1,6 +1,6 @@
 package permissions
 
-import "git.terah.dev/imterah/hermes/api/dbcore"
+import "git.terah.dev/imterah/hermes/backend/api/dbcore"
 
 var DefaultPermissionNodes []string = []string{
 	"routes.add",

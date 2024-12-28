@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"git.terah.dev/imterah/hermes/backendutil"
-	"git.terah.dev/imterah/hermes/commonbackend"
+	"git.terah.dev/imterah/hermes/backend/backendutil"
+	"git.terah.dev/imterah/hermes/backend/commonbackend"
 	"github.com/charmbracelet/log"
 )
 

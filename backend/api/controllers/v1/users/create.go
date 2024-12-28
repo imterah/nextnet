@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
-	"git.terah.dev/imterah/hermes/api/dbcore"
-	"git.terah.dev/imterah/hermes/api/jwtcore"
-	permissionHelper "git.terah.dev/imterah/hermes/api/permissions"
+	"git.terah.dev/imterah/hermes/backend/api/dbcore"
+	"git.terah.dev/imterah/hermes/backend/api/jwtcore"
+	permissionHelper "git.terah.dev/imterah/hermes/backend/api/permissions"
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"

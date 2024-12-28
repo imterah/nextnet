@@ -1,6 +1,6 @@
 package backendutil
 
-import "git.terah.dev/imterah/hermes/commonbackend"
+import "git.terah.dev/imterah/hermes/backend/commonbackend"
 
 type BackendInterface interface {
 	StartBackend(arguments []byte) (bool, error)

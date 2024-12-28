@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"git.terah.dev/imterah/hermes/api/dbcore"
+	"git.terah.dev/imterah/hermes/backend/api/dbcore"
 	"github.com/charmbracelet/log"
 	"github.com/go-playground/validator/v10"
 	"github.com/urfave/cli/v2"

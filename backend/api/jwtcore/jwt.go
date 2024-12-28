@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"git.terah.dev/imterah/hermes/api/dbcore"
+	"git.terah.dev/imterah/hermes/backend/api/dbcore"
 	"github.com/golang-jwt/jwt/v5"
 )
 

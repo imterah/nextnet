@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"time"
 
-	"git.terah.dev/imterah/hermes/backendlauncher"
-	"git.terah.dev/imterah/hermes/commonbackend"
+	"git.terah.dev/imterah/hermes/backend/backendlauncher"
+	"git.terah.dev/imterah/hermes/backend/commonbackend"
 	"github.com/charmbracelet/log"
 )
 

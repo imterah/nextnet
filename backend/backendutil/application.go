@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"git.terah.dev/imterah/hermes/commonbackend"
+	"git.terah.dev/imterah/hermes/backend/commonbackend"
 	"github.com/charmbracelet/log"
 )
 
