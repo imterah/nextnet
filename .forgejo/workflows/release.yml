@@ -32,23 +32,12 @@ jobs:
           username: imterah
           password: ${{secrets.ACTIONS_PACKAGES_DEPL_KEY}}
 
-      - name: Build Docker images
+      - name: Build Docker image
         run: |
           docker build ./backend --tag ghcr.io/imterah/hermes:$GITHUB_REF_NAME
-          docker build -t ghcr.io/imterah/hermes-backend-migration:$GITHUB_REF_NAME -f MigrationDockerfile .
 
-          docker build ./sshfrontend --tag ghcr.io/imterah/hermes-lom:$GITHUB_REF_NAME
-
-      - name: Upload all Docker images
+      - name: Upload Docker image
         run: |
           docker tag ghcr.io/imterah/hermes:$GITHUB_REF_NAME ghcr.io/imterah/hermes:latest
           docker push ghcr.io/imterah/hermes:$GITHUB_REF_NAME
           docker push ghcr.io/imterah/hermes:latest
-
-          docker tag ghcr.io/imterah/hermes-backend-migration:$GITHUB_REF_NAME ghcr.io/imterah/hermes-backend-migration:latest
-          docker push ghcr.io/imterah/hermes-backend-migration:$GITHUB_REF_NAME
-          docker push ghcr.io/imterah/hermes-backend-migration:latest
-
-          docker tag ghcr.io/imterah/hermes-lom:$GITHUB_REF_NAME ghcr.io/imterah/hermes-lom:latest
-          docker push ghcr.io/imterah/hermes-lom:$GITHUB_REF_NAME
-          docker push ghcr.io/imterah/hermes-lom:latest
