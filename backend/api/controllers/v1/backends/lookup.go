@@ -27,9 +27,9 @@ type SanitizedBackend struct {
 	Name              string   `json:"name"`
 	BackendID         uint     `json:"id"`
 	OwnerID           uint     `json:"ownerID"`
-	Description       *string  `json:"description"`
+	Description       *string  `json:"description,omitempty"`
 	Backend           string   `json:"backend"`
-	BackendParameters *string  `json:"connectionDetails"`
+	BackendParameters *string  `json:"connectionDetails,omitempty"`
 	Logs              []string `json:"logs"`
 }
 
