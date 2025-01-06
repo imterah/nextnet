@@ -7,11 +7,11 @@ if [ ! -d "backend/.tmp" ]; then
   mkdir backend/.tmp
 fi
 
-if [ ! -f "backend-legacy/.env" ]; then
-  cp backend-legacy/dev.env backend-legacy/.env
+if [ ! -f "frontend/.env" ]; then
+  cp frontend/dev.env frontend/.env
 fi
 
 set -a
-source backend-legacy/.env
 source backend/.env
+source frontend/.env
 set +a

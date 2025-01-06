@@ -3,12 +3,10 @@ backend/sshbackend/sshbackend
 backend/dummybackend/dummybackend
 backend/externalbackendlauncher/externalbackendlauncher
 backend/api/api
+frontend/frontend
 
 # Backup artifacts
 *.json.gz
-
-# LOM
-sshfrontend/keys
 
 # Output
 out
