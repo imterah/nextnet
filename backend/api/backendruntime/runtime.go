@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"git.terah.dev/imterah/hermes/backend/backendlauncher"
@@ -23,21 +24,21 @@ func init() {
 	RunningBackends = make(map[uint]*Runtime)
 }
 
-func handleCommand(commandType string, command interface{}, sock net.Conn, rtcChan chan interface{}) {
+func handleCommand(commandType string, command interface{}, sock net.Conn, rtcChan chan interface{}) error {
 	bytes, err := commonbackend.Marshal(commandType, command)
 
 	if err != nil {
 		log.Warnf("Failed to marshal message: %s", err.Error())
 		rtcChan <- fmt.Errorf("failed to marshal message: %s", err.Error())
 
-		return
+		return fmt.Errorf("failed to marshal message: %s", err.Error())
 	}
 
 	if _, err := sock.Write(bytes); err != nil {
 		log.Warnf("Failed to write message: %s", err.Error())
 		rtcChan <- fmt.Errorf("failed to write message: %s", err.Error())
 
-		return
+		return fmt.Errorf("failed to write message: %s", err.Error())
 	}
 
 	_, data, err := commonbackend.Unmarshal(sock)
@@ -46,10 +47,12 @@ func handleCommand(commandType string, command interface{}, sock net.Conn, rtcCh
 		log.Warnf("Failed to unmarshal message: %s", err.Error())
 		rtcChan <- fmt.Errorf("failed to unmarshal message: %s", err.Error())
 
-		return
+		return fmt.Errorf("failed to unmarshal message: %s", err.Error())
 	}
 
 	rtcChan <- data
+
+	return nil
 }
 
 func (runtime *Runtime) goRoutineHandler() error {
@@ -69,7 +72,7 @@ func (runtime *Runtime) goRoutineHandler() error {
 	log.Debugf("Acquired unix socket at: %s", sockPath)
 
 	go func() {
-		log.Debug("Creating new goroutine for socket connection handling")
+		log.Debug("Created new Goroutine for socket connection handling")
 
 		for {
 			log.Debug("Waiting for Unix socket connections...")
@@ -80,55 +83,205 @@ func (runtime *Runtime) goRoutineHandler() error {
 				return
 			}
 
-			log.Debug("Recieved connection. Initializing...")
+			log.Debug("Recieved connection. Attempting to figure out backend state...")
 
-			defer sock.Close()
+			timeoutChannel := time.After(500 * time.Millisecond)
 
+			select {
+			case <-timeoutChannel:
+				log.Debug("Timeout reached. Assuming backend is running.")
+			case hasRestarted, ok := <-runtime.processRestartNotification:
+				if !ok {
+					log.Warnf("Failed to get the process restart notification state!")
+				}
+
+				if hasRestarted {
+					if runtime.OnCrashCallback == nil {
+						log.Warn("The backend has restarted for some reason, but we could not run the on crash callback as the callback is not set!")
+					} else {
+						log.Debug("We have restarted. Running the restart callback...")
+						runtime.OnCrashCallback(sock)
+						log.Debug("Finished running the restart callback.")
+					}
+				} else {
+					log.Debug("We have not restarted.")
+				}
+			}
+
+			go func() {
+				log.Debugf("Setting up Hermes keepalive Goroutine")
+				hasFailedBackendRunningCheckAlready := false
+
+				time.Sleep(time.Second * 1)
+
+				for {
+					if !runtime.isRuntimeRunning {
+						return
+					}
+
+					// Asking for the backend status seems to be a "good-enough" keepalive system. Plus, it provides useful telemetry.
+					// There isn't a ping command in the backend API, so we have to make do with what we have.
+					//
+					// To be safe here, we have to use the proper (yet annoying) facilities to prevent cross-talk, since we're in
+					// a goroutine, and can't talk directly. This actually has benefits, as the OuterLoop should exit on its own, if we
+					// encounter a critical error.
+					runtime.RuntimeCommands <- &commonbackend.BackendStatusRequest{
+						Type: "backendStatusRequest",
+					}
+
+					statusResponse := <-runtime.RuntimeCommands
+
+					switch responseMessage := statusResponse.(type) {
+					case error:
+						log.Warnf("Failed to get response for backend (in backend runtime keep alive): %s", responseMessage.Error())
+						log.Debugf("Attempting to close socket...")
+						err := sock.Close()
+
+						if err != nil {
+							log.Debugf("Failed to close socket: %s", err.Error())
+						}
+					case *commonbackend.BackendStatusResponse:
+						if !responseMessage.IsRunning {
+							if hasFailedBackendRunningCheckAlready {
+								if responseMessage.Message != "" {
+									log.Warnf("Backend (in backend keepalive) is up but not active: %s", responseMessage.Message)
+								} else {
+									log.Warnf("Backend (in backend keepalive) is up but not active")
+								}
+							}
+
+							hasFailedBackendRunningCheckAlready = true
+						}
+					default:
+						log.Errorf("Got illegal response type for backend (in backend keepalive): %T", responseMessage)
+						log.Debugf("Attempting to close socket...")
+						err := sock.Close()
+
+						if err != nil {
+							log.Debugf("Failed to close socket: %s", err.Error())
+						}
+					}
+
+					time.Sleep(5)
+				}
+			}()
+
+		OuterLoop:
 			for {
 				commandRaw := <-runtime.RuntimeCommands
 
-				log.Debug("Got message from server")
-
 				switch command := commandRaw.(type) {
 				case *commonbackend.AddProxy:
-					handleCommand("addProxy", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("addProxy", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.BackendStatusRequest:
-					handleCommand("backendStatusRequest", command, sock, runtime.RuntimeCommands)
-				case *commonbackend.BackendStatusResponse:
-					handleCommand("backendStatusResponse", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("backendStatusRequest", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.CheckClientParameters:
-					handleCommand("checkClientParameters", command, sock, runtime.RuntimeCommands)
-				case *commonbackend.CheckParametersResponse:
-					handleCommand("checkParametersResponse", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("checkClientParameters", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.CheckServerParameters:
-					handleCommand("checkServerParameters", command, sock, runtime.RuntimeCommands)
-				case *commonbackend.ProxyClientConnection:
-					handleCommand("proxyClientConnection", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("checkServerParameters", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.ProxyConnectionsRequest:
-					handleCommand("proxyConnectionsRequest", command, sock, runtime.RuntimeCommands)
-				case *commonbackend.ProxyConnectionsResponse:
-					handleCommand("proxyConnectionsResponse", command, sock, runtime.RuntimeCommands)
-				case *commonbackend.ProxyInstanceResponse:
-					handleCommand("proxyInstanceResponse", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("proxyConnectionsRequest", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.ProxyInstanceRequest:
-					handleCommand("proxyInstanceRequest", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("proxyInstanceRequest", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.ProxyStatusRequest:
-					handleCommand("proxyStatusRequest", command, sock, runtime.RuntimeCommands)
-				case *commonbackend.ProxyStatusResponse:
-					handleCommand("proxyStatusResponse", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("proxyStatusRequest", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.RemoveProxy:
-					handleCommand("removeProxy", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("removeProxy", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.Start:
-					handleCommand("start", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("start", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				case *commonbackend.Stop:
-					handleCommand("stop", command, sock, runtime.RuntimeCommands)
+					err := handleCommand("stop", command, sock, runtime.RuntimeCommands)
+
+					if err != nil {
+						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+						if strings.HasPrefix(err.Error(), "failed to write message") {
+							break OuterLoop
+						}
+					}
 				default:
 					log.Warnf("Recieved unknown command type from channel: %q", command)
 					runtime.RuntimeCommands <- fmt.Errorf("unknown command recieved")
 				}
 			}
+
+			sock.Close()
 		}
 	}()
+
+	runtime.processRestartNotification <- false
 
 	for {
 		log.Debug("Starting process...")
@@ -161,6 +314,14 @@ func (runtime *Runtime) goRoutineHandler() error {
 
 		log.Debug("Sleeping 5 seconds, and then restarting process")
 		time.Sleep(5 * time.Second)
+
+		// NOTE(imterah): This could cause hangs if we're not careful. If the process dies so much that we can't keep up, it should deserve to be hung, really.
+		// There's probably a better way to do this, but this works.
+		//
+		// If this does turn out to be a problem, just increase the Goroutine buffer size.
+		runtime.processRestartNotification <- true
+
+		log.Debug("Sent off notification.")
 	}
 }
 
@@ -170,6 +331,7 @@ func (runtime *Runtime) Start() error {
 	}
 
 	runtime.RuntimeCommands = make(chan interface{})
+	runtime.processRestartNotification = make(chan bool, 1)
 
 	runtime.logger = &writeLogger{
 		Runtime: runtime,

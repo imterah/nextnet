@@ -12,14 +12,17 @@ type Backend struct {
 }
 
 type Runtime struct {
-	isRuntimeRunning bool
-	logger           *writeLogger
-	currentProcess   *exec.Cmd
-	currentListener  net.Listener
+	isRuntimeRunning           bool
+	logger                     *writeLogger
+	currentProcess             *exec.Cmd
+	currentListener            net.Listener
+	processRestartNotification chan bool
 
 	ProcessPath     string
 	Logs            []string
 	RuntimeCommands chan interface{}
+
+	OnCrashCallback func(sock net.Conn)
 }
 
 type writeLogger struct {
