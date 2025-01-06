@@ -112,12 +112,10 @@ func apiEntrypoint(cCtx *cli.Context) error {
 			continue
 		}
 
-		backendInstance.RuntimeCommands <- &commonbackend.Start{
+		backendStartResponse, err := backendInstance.ProcessCommand(&commonbackend.Start{
 			Type:      "start",
 			Arguments: backendParameters,
-		}
-
-		backendStartResponse := <-backendInstance.RuntimeCommands
+		})
 
 		switch responseMessage := backendStartResponse.(type) {
 		case error:
@@ -165,20 +163,20 @@ func apiEntrypoint(cCtx *cli.Context) error {
 		for _, proxy := range autoStartProxies {
 			log.Infof("Starting up route #%d for backend #%d: %s", proxy.ID, backend.ID, proxy.Name)
 
-			backendInstance.RuntimeCommands <- &commonbackend.AddProxy{
+			backendResponse, err := backendInstance.ProcessCommand(&commonbackend.AddProxy{
 				Type:       "addProxy",
 				SourceIP:   proxy.SourceIP,
 				SourcePort: proxy.SourcePort,
 				DestPort:   proxy.DestinationPort,
 				Protocol:   proxy.Protocol,
+			})
+
+			if err != nil {
+				log.Errorf("Failed to get response for backend #%d and route #%d: %s", proxy.BackendID, proxy.ID, err.Error())
+				continue
 			}
 
-			backendResponse := <-backendInstance.RuntimeCommands
-
 			switch responseMessage := backendResponse.(type) {
-			case error:
-				log.Errorf("Failed to get response for backend #%d and route #%d: %s", proxy.BackendID, proxy.ID, responseMessage.Error())
-				continue
 			case *commonbackend.ProxyStatusResponse:
 				if !responseMessage.IsActive {
 					log.Warnf("Failed to start proxy for backend #%d and route #%d", proxy.BackendID, proxy.ID)

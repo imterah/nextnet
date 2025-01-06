@@ -100,15 +100,13 @@ func StartProxy(c *gin.Context) {
 		return
 	}
 
-	backend.RuntimeCommands <- &commonbackend.AddProxy{
+	backendResponse, err := backend.ProcessCommand(&commonbackend.AddProxy{
 		Type:       "addProxy",
 		SourceIP:   proxy.SourceIP,
 		SourcePort: proxy.SourcePort,
 		DestPort:   proxy.DestinationPort,
 		Protocol:   proxy.Protocol,
-	}
-
-	backendResponse := <-backend.RuntimeCommands
+	})
 
 	switch responseMessage := backendResponse.(type) {
 	case error:

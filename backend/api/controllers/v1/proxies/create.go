@@ -139,25 +139,25 @@ func CreateProxy(c *gin.Context) {
 			return
 		}
 
-		backend.RuntimeCommands <- &commonbackend.AddProxy{
+		backendResponse, err := backend.ProcessCommand(&commonbackend.AddProxy{
 			Type:       "addProxy",
 			SourceIP:   proxy.SourceIP,
 			SourcePort: proxy.SourcePort,
 			DestPort:   proxy.DestinationPort,
 			Protocol:   proxy.Protocol,
-		}
+		})
 
-		backendResponse := <-backend.RuntimeCommands
-
-		switch responseMessage := backendResponse.(type) {
-		case error:
-			log.Warnf("Failed to get response for backend #%d: %s", proxy.BackendID, responseMessage.Error())
+		if err != nil {
+			log.Warnf("Failed to get response for backend #%d: %s", proxy.BackendID, err.Error())
 
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to get response from backend",
 			})
 
 			return
+		}
+
+		switch responseMessage := backendResponse.(type) {
 		case *commonbackend.ProxyStatusResponse:
 			if !responseMessage.IsActive {
 				log.Warnf("Failed to start proxy for backend #%d", proxy.BackendID)
