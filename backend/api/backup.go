@@ -67,21 +67,16 @@ type BackupData struct {
 }
 
 // From https://stackoverflow.com/questions/54461423/efficient-way-to-remove-all-non-alphanumeric-characters-from-large-text
-// Strips all alphanumeric characters from a string
 func stripAllAlphanumeric(s string) string {
 	var result strings.Builder
-
 	for i := 0; i < len(s); i++ {
 		b := s[i]
 		if ('a' <= b && b <= 'z') ||
 			('A' <= b && b <= 'Z') ||
 			('0' <= b && b <= '9') {
 			result.WriteByte(b)
-		} else {
-			result.WriteByte('_')
 		}
 	}
-
 	return result.String()
 }
 
