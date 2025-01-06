@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 pushd sshbackend
-CGO_ENABLED=0 GOOS=linux go build .
+GOOS=linux go build .
 strip sshbackend
 popd
 
 pushd dummybackend
-CGO_ENABLED=0 GOOS=linux go build .
+GOOS=linux go build .
 strip dummybackend
 popd
 
@@ -15,6 +15,6 @@ strip externalbackendlauncher
 popd
 
 pushd api
-CGO_ENABLED=0 GOOS=linux go build .
+GOOS=linux go build .
 strip api
 popd
