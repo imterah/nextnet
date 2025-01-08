@@ -421,7 +421,12 @@ SchedulingLoop:
 	}
 
 	// Fetch response and close Channel
-	response := <-commandChannel
+	response, ok := <-commandChannel
+
+	if !ok {
+		return nil, fmt.Errorf("failed to read from command channel: recieved signal that is not OK")
+	}
+
 	close(commandChannel)
 
 	err, ok := response.(error)
@@ -443,11 +448,11 @@ func (runtime *Runtime) cleanUpPendingCommandProcessingJobs() {
 
 		select {
 		case <-timeoutChannel:
-			log.Fatal("Message channel is likely running (timed out reading from it without an error)")
+			log.Warn("Message channel is likely running (timed out reading from it without an error)")
 			close(message.Channel)
 		case _, ok := <-message.Channel:
 			if ok {
-				log.Fatal("Message channel is running, but should be stopped (since message is NOT nil!)")
+				log.Warn("Message channel is running, but should be stopped (since message is NOT nil!)")
 				close(message.Channel)
 			}
 		}
