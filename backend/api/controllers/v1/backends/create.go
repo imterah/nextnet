@@ -125,16 +125,13 @@ func CreateBackend(c *gin.Context) {
 		return
 	}
 
-	backend.RuntimeCommands <- &commonbackend.CheckServerParameters{
+	backendParamCheckResponse, err := backend.ProcessCommand(&commonbackend.CheckServerParameters{
 		Type:      "checkServerParameters",
 		Arguments: backendParameters,
-	}
+	})
 
-	backendParamCheckResponse := <-backend.RuntimeCommands
-
-	switch responseMessage := backendParamCheckResponse.(type) {
-	case error:
-		log.Warnf("Failed to get response for backend: %s", responseMessage.Error())
+	if err != nil {
+		log.Warnf("Failed to get response for backend: %s", err.Error())
 
 		err = backend.Stop()
 
@@ -147,6 +144,9 @@ func CreateBackend(c *gin.Context) {
 		})
 
 		return
+	}
+
+	switch responseMessage := backendParamCheckResponse.(type) {
 	case *commonbackend.CheckParametersResponse:
 		if responseMessage.InResponseTo != "checkServerParameters" {
 			log.Errorf("Got illegal response to CheckServerParameters: %s", responseMessage.InResponseTo)
@@ -215,16 +215,13 @@ func CreateBackend(c *gin.Context) {
 		return
 	}
 
-	backend.RuntimeCommands <- &commonbackend.Start{
+	backendStartResponse, err := backend.ProcessCommand(&commonbackend.Start{
 		Type:      "start",
 		Arguments: backendParameters,
-	}
+	})
 
-	backendStartResponse := <-backend.RuntimeCommands
-
-	switch responseMessage := backendStartResponse.(type) {
-	case error:
-		log.Warnf("Failed to get response for backend: %s", responseMessage.Error())
+	if err != nil {
+		log.Warnf("Failed to get response for backend: %s", err.Error())
 
 		err = backend.Stop()
 
@@ -237,6 +234,9 @@ func CreateBackend(c *gin.Context) {
 		})
 
 		return
+	}
+
+	switch responseMessage := backendStartResponse.(type) {
 	case *commonbackend.BackendStatusResponse:
 		if !responseMessage.IsRunning {
 			err = backend.Stop()

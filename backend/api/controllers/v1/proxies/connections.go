@@ -118,19 +118,21 @@ func GetConnections(c *gin.Context) {
 		return
 	}
 
-	backendRuntime.RuntimeCommands <- &commonbackend.ProxyConnectionsRequest{
+	backendResponse, err := backendRuntime.ProcessCommand(&commonbackend.ProxyConnectionsRequest{
 		Type: "proxyConnectionsRequest",
-	}
+	})
 
-	backendResponse := <-backendRuntime.RuntimeCommands
-
-	switch responseMessage := backendResponse.(type) {
-	case error:
-		log.Warnf("Failed to get response for backend: %s", responseMessage.Error())
+	if err != nil {
+		log.Warnf("Failed to get response for backend: %s", err.Error())
 
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get status response from backend",
 		})
+
+		return
+	}
+
+	switch responseMessage := backendResponse.(type) {
 	case *commonbackend.ProxyConnectionsResponse:
 		sanitizedConnections := []*SanitizedConnection{}
 

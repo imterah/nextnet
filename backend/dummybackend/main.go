@@ -19,6 +19,10 @@ func (backend *DummyBackend) StopBackend() (bool, error) {
 	return true, nil
 }
 
+func (backend *DummyBackend) GetBackendStatus() (bool, error) {
+	return true, nil
+}
+
 func (backend *DummyBackend) StartProxy(command *commonbackend.AddProxy) (bool, error) {
 	return true, nil
 }

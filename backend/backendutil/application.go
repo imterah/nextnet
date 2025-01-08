@@ -73,6 +73,42 @@ func (helper *BackendApplicationHelper) Start() error {
 			}
 
 			helper.socket.Write(responseMarshalled)
+		case "backendStatusRequest":
+			_, ok := commandRaw.(*commonbackend.BackendStatusRequest)
+
+			if !ok {
+				return fmt.Errorf("failed to typecast")
+			}
+
+			ok, err := helper.Backend.GetBackendStatus()
+
+			var (
+				message    string
+				statusCode int
+			)
+
+			if err != nil {
+				message = err.Error()
+				statusCode = commonbackend.StatusFailure
+			} else {
+				statusCode = commonbackend.StatusSuccess
+			}
+
+			response := &commonbackend.BackendStatusResponse{
+				Type:       "backendStatusResponse",
+				IsRunning:  ok,
+				StatusCode: statusCode,
+				Message:    message,
+			}
+
+			responseMarshalled, err := commonbackend.Marshal(response.Type, response)
+
+			if err != nil {
+				log.Error("failed to marshal response: %s", err.Error())
+				continue
+			}
+
+			helper.socket.Write(responseMarshalled)
 		case "stop":
 			_, ok := commandRaw.(*commonbackend.Stop)
 

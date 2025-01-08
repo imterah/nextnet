@@ -7,22 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"git.terah.dev/imterah/hermes/backend/backendlauncher"
 	"git.terah.dev/imterah/hermes/backend/commonbackend"
 	"github.com/charmbracelet/log"
 )
-
-var (
-	AvailableBackends []*Backend
-	RunningBackends   map[uint]*Runtime
-	TempDir           string
-)
-
-func init() {
-	RunningBackends = make(map[uint]*Runtime)
-}
 
 func handleCommand(commandType string, command interface{}, sock net.Conn, rtcChan chan interface{}) error {
 	bytes, err := commonbackend.Marshal(commandType, command)
@@ -101,18 +92,19 @@ func (runtime *Runtime) goRoutineHandler() error {
 					} else {
 						log.Debug("We have restarted. Running the restart callback...")
 						runtime.OnCrashCallback(sock)
-						log.Debug("Finished running the restart callback.")
 					}
+
+					log.Debug("Clearing caches...")
+					runtime.cleanUpPendingCommandProcessingJobs()
+					runtime.messageBufferLock = sync.Mutex{}
 				} else {
 					log.Debug("We have not restarted.")
 				}
 			}
 
 			go func() {
-				log.Debugf("Setting up Hermes keepalive Goroutine")
+				log.Debug("Setting up Hermes keepalive Goroutine")
 				hasFailedBackendRunningCheckAlready := false
-
-				time.Sleep(time.Second * 1)
 
 				for {
 					if !runtime.isRuntimeRunning {
@@ -125,21 +117,23 @@ func (runtime *Runtime) goRoutineHandler() error {
 					// To be safe here, we have to use the proper (yet annoying) facilities to prevent cross-talk, since we're in
 					// a goroutine, and can't talk directly. This actually has benefits, as the OuterLoop should exit on its own, if we
 					// encounter a critical error.
-					runtime.RuntimeCommands <- &commonbackend.BackendStatusRequest{
+					statusResponse, err := runtime.ProcessCommand(&commonbackend.BackendStatusRequest{
 						Type: "backendStatusRequest",
-					}
+					})
 
-					statusResponse := <-runtime.RuntimeCommands
-
-					switch responseMessage := statusResponse.(type) {
-					case error:
-						log.Warnf("Failed to get response for backend (in backend runtime keep alive): %s", responseMessage.Error())
+					if err != nil {
+						log.Warnf("Failed to get response for backend (in backend runtime keep alive): %s", err.Error())
 						log.Debugf("Attempting to close socket...")
 						err := sock.Close()
 
 						if err != nil {
 							log.Debugf("Failed to close socket: %s", err.Error())
 						}
+
+						continue
+					}
+
+					switch responseMessage := statusResponse.(type) {
 					case *commonbackend.BackendStatusResponse:
 						if !responseMessage.IsRunning {
 							if hasFailedBackendRunningCheckAlready {
@@ -162,118 +156,124 @@ func (runtime *Runtime) goRoutineHandler() error {
 						}
 					}
 
-					time.Sleep(5)
+					time.Sleep(5 * time.Second)
 				}
 			}()
 
 		OuterLoop:
 			for {
-				commandRaw := <-runtime.RuntimeCommands
-
-				switch command := commandRaw.(type) {
-				case *commonbackend.AddProxy:
-					err := handleCommand("addProxy", command, sock, runtime.RuntimeCommands)
-
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
-
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
-						}
+				for chanIndex, messageData := range runtime.messageBuffer {
+					if messageData == nil {
+						continue
 					}
-				case *commonbackend.BackendStatusRequest:
-					err := handleCommand("backendStatusRequest", command, sock, runtime.RuntimeCommands)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+					switch command := messageData.Message.(type) {
+					case *commonbackend.AddProxy:
+						err := handleCommand("addProxy", command, sock, messageData.Channel)
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.CheckClientParameters:
-					err := handleCommand("checkClientParameters", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.BackendStatusRequest:
+						err := handleCommand("backendStatusRequest", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.CheckServerParameters:
-					err := handleCommand("checkServerParameters", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.CheckClientParameters:
+						err := handleCommand("checkClientParameters", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.ProxyConnectionsRequest:
-					err := handleCommand("proxyConnectionsRequest", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.CheckServerParameters:
+						err := handleCommand("checkServerParameters", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.ProxyInstanceRequest:
-					err := handleCommand("proxyInstanceRequest", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.ProxyConnectionsRequest:
+						err := handleCommand("proxyConnectionsRequest", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.ProxyStatusRequest:
-					err := handleCommand("proxyStatusRequest", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.ProxyInstanceRequest:
+						err := handleCommand("proxyInstanceRequest", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.RemoveProxy:
-					err := handleCommand("removeProxy", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.ProxyStatusRequest:
+						err := handleCommand("proxyStatusRequest", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.Start:
-					err := handleCommand("start", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.RemoveProxy:
+						err := handleCommand("removeProxy", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
-					}
-				case *commonbackend.Stop:
-					err := handleCommand("stop", command, sock, runtime.RuntimeCommands)
+					case *commonbackend.Start:
+						err := handleCommand("start", command, sock, messageData.Channel)
 
-					if err != nil {
-						log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
 
-						if strings.HasPrefix(err.Error(), "failed to write message") {
-							break OuterLoop
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
 						}
+					case *commonbackend.Stop:
+						err := handleCommand("stop", command, sock, messageData.Channel)
+
+						if err != nil {
+							log.Warnf("failed to handle command in backend runtime instance: %s", err.Error())
+
+							if strings.HasPrefix(err.Error(), "failed to write message") {
+								break OuterLoop
+							}
+						}
+					default:
+						log.Warnf("Recieved unknown command type from channel: %T", command)
+						messageData.Channel <- fmt.Errorf("unknown command recieved")
 					}
-				default:
-					log.Warnf("Recieved unknown command type from channel: %q", command)
-					runtime.RuntimeCommands <- fmt.Errorf("unknown command recieved")
+
+					runtime.messageBuffer[chanIndex] = nil
 				}
 			}
 
@@ -330,7 +330,9 @@ func (runtime *Runtime) Start() error {
 		return fmt.Errorf("runtime already running")
 	}
 
-	runtime.RuntimeCommands = make(chan interface{})
+	runtime.messageBuffer = make([]*messageForBuf, 10)
+	runtime.messageBufferLock = sync.Mutex{}
+
 	runtime.processRestartNotification = make(chan bool, 1)
 
 	runtime.logger = &writeLogger{
@@ -377,6 +379,81 @@ func (runtime *Runtime) Stop() error {
 	}
 
 	return nil
+}
+
+func (runtime *Runtime) ProcessCommand(command interface{}) (interface{}, error) {
+	schedulingAttempts := 0
+	var commandChannel chan interface{}
+
+SchedulingLoop:
+	for {
+		if !runtime.isRuntimeRunning {
+			time.Sleep(10 * time.Millisecond)
+		}
+
+		if schedulingAttempts > 50 {
+			return nil, fmt.Errorf("failed to schedule message transmission after 50 tries (REPORT THIS ISSUE)")
+		}
+
+		runtime.messageBufferLock.Lock()
+
+		// Attempt to find spot in buffer to schedule message transmission
+		for i, message := range runtime.messageBuffer {
+			if message != nil {
+				continue
+			}
+
+			commandChannel = make(chan interface{})
+
+			runtime.messageBuffer[i] = &messageForBuf{
+				Channel: commandChannel,
+				Message: command,
+			}
+
+			runtime.messageBufferLock.Unlock()
+			break SchedulingLoop
+		}
+
+		runtime.messageBufferLock.Unlock()
+		time.Sleep(100 * time.Millisecond)
+
+		schedulingAttempts++
+	}
+
+	// Fetch response and close Channel
+	response := <-commandChannel
+	close(commandChannel)
+
+	err, ok := response.(error)
+
+	if ok {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (runtime *Runtime) cleanUpPendingCommandProcessingJobs() {
+	for messageIndex, message := range runtime.messageBuffer {
+		if message == nil {
+			continue
+		}
+
+		timeoutChannel := time.After(100 * time.Millisecond)
+
+		select {
+		case <-timeoutChannel:
+			log.Fatal("Message channel is likely running (timed out reading from it without an error)")
+			close(message.Channel)
+		case _, ok := <-message.Channel:
+			if ok {
+				log.Fatal("Message channel is running, but should be stopped (since message is NOT nil!)")
+				close(message.Channel)
+			}
+		}
+
+		runtime.messageBuffer[messageIndex] = nil
+	}
 }
 
 func NewBackend(path string) *Runtime {

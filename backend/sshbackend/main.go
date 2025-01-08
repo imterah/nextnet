@@ -96,6 +96,10 @@ func (backend *SSHBackend) StopBackend() (bool, error) {
 	return true, nil
 }
 
+func (backend *SSHBackend) GetBackendStatus() (bool, error) {
+	return backend.conn != nil, nil
+}
+
 func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, error) {
 	listenerObject := &SSHListener{
 		SourceIP:   command.SourceIP,
