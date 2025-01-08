@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -211,13 +212,13 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 
 					for {
 						len, err := forwardedConn.Read(forwardedBuffer)
-						if err != nil {
+
+						if err != nil && err.Error() != "EOF" && !errors.Is(err, net.ErrClosed) {
 							log.Errorf("failed to read from forwarded connection: %s", err.Error())
 							return
 						}
 
-						_, err = sourceConn.Write(forwardedBuffer[:len])
-						if err != nil {
+						if _, err = sourceConn.Write(forwardedBuffer[:len]); err != nil && err.Error() != "EOF" && !errors.Is(err, net.ErrClosed) {
 							log.Errorf("failed to write to source connection: %s", err.Error())
 							return
 						}
@@ -229,13 +230,13 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 
 					for {
 						len, err := sourceConn.Read(sourceBuffer)
-						if err != nil && err.Error() != "EOF" && strings.HasSuffix(err.Error(), "use of closed network connection") {
+
+						if err != nil && err.Error() != "EOF" && !errors.Is(err, net.ErrClosed) {
 							log.Errorf("failed to read from source connection: %s", err.Error())
 							return
 						}
 
-						_, err = forwardedConn.Write(sourceBuffer[:len])
-						if err != nil && err.Error() != "EOF" && strings.HasSuffix(err.Error(), "use of closed network connection") {
+						if _, err = forwardedConn.Write(sourceBuffer[:len]); err != nil && err.Error() != "EOF" && !errors.Is(err, net.ErrClosed) {
 							log.Errorf("failed to write to forwarded connection: %s", err.Error())
 							return
 						}
