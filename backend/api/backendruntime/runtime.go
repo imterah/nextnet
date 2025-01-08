@@ -92,17 +92,18 @@ func (runtime *Runtime) goRoutineHandler() error {
 					} else {
 						log.Debug("We have restarted. Running the restart callback...")
 						runtime.OnCrashCallback(sock)
-						log.Debug("Finished running the restart callback. Clearing caches...")
-						runtime.cleanUpPendingCommandProcessingJobs()
-						runtime.messageBufferLock = sync.Mutex{}
 					}
+
+					log.Debug("Clearing caches...")
+					runtime.cleanUpPendingCommandProcessingJobs()
+					runtime.messageBufferLock = sync.Mutex{}
 				} else {
 					log.Debug("We have not restarted.")
 				}
 			}
 
 			go func() {
-				log.Debugf("Setting up Hermes keepalive Goroutine")
+				log.Debug("Setting up Hermes keepalive Goroutine")
 				hasFailedBackendRunningCheckAlready := false
 
 				for {
@@ -155,7 +156,7 @@ func (runtime *Runtime) goRoutineHandler() error {
 						}
 					}
 
-					time.Sleep(5)
+					time.Sleep(5 * time.Second)
 				}
 			}()
 
@@ -166,7 +167,6 @@ func (runtime *Runtime) goRoutineHandler() error {
 						continue
 					}
 
-					// We don't use the Mutex here as the Mutex is only to prevent cross-talk between multiple ProcessCommand() calls.
 					switch command := messageData.Message.(type) {
 					case *commonbackend.AddProxy:
 						err := handleCommand("addProxy", command, sock, messageData.Channel)
@@ -269,7 +269,7 @@ func (runtime *Runtime) goRoutineHandler() error {
 							}
 						}
 					default:
-						log.Warnf("Recieved unknown command type from channel: %q", command)
+						log.Warnf("Recieved unknown command type from channel: %T", command)
 						messageData.Channel <- fmt.Errorf("unknown command recieved")
 					}
 
@@ -392,7 +392,7 @@ SchedulingLoop:
 		}
 
 		if schedulingAttempts > 50 {
-			return nil, fmt.Errorf("failed to schedule synchronous message transmission after 50 tries with 100ms intervals (REPORT THIS ISSUE)")
+			return nil, fmt.Errorf("failed to schedule message transmission after 50 tries (REPORT THIS ISSUE)")
 		}
 
 		runtime.messageBufferLock.Lock()
@@ -439,7 +439,19 @@ func (runtime *Runtime) cleanUpPendingCommandProcessingJobs() {
 			continue
 		}
 
-		close(message.Channel)
+		timeoutChannel := time.After(100 * time.Millisecond)
+
+		select {
+		case <-timeoutChannel:
+			log.Fatal("Message channel is likely running (timed out reading from it without an error)")
+			close(message.Channel)
+		case _, ok := <-message.Channel:
+			if ok {
+				log.Fatal("Message channel is running, but should be stopped (since message is NOT nil!)")
+				close(message.Channel)
+			}
+		}
+
 		runtime.messageBuffer[messageIndex] = nil
 	}
 }

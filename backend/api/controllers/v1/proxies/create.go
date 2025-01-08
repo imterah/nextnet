@@ -123,6 +123,8 @@ func CreateProxy(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to add forward rule to database",
 		})
+
+		return
 	}
 
 	if autoStart {

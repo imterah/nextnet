@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -98,6 +99,96 @@ func apiEntrypoint(cCtx *cli.Context) error {
 		}
 
 		backendInstance := backendruntime.NewBackend(backendRuntimeFilePath)
+
+		backendInstance.OnCrashCallback = func(conn net.Conn) {
+			backendParameters, err := base64.StdEncoding.DecodeString(backend.BackendParameters)
+
+			if err != nil {
+				log.Errorf("Failed to decode backend parameters for backend #%d: %s", backend.ID, err.Error())
+				return
+			}
+
+			marshalledStartCommand, err := commonbackend.Marshal("start", &commonbackend.Start{
+				Type:      "start",
+				Arguments: backendParameters,
+			})
+
+			if err != nil {
+				log.Errorf("Failed to marshal start command for backend #%d: %s", backend.ID, err.Error())
+				return
+			}
+
+			if _, err := conn.Write(marshalledStartCommand); err != nil {
+				log.Errorf("Failed to send start command for backend #%d: %s", backend.ID, err.Error())
+				return
+			}
+
+			_, backendResponse, err := commonbackend.Unmarshal(conn)
+
+			if err != nil {
+				log.Errorf("Failed to get start command response for backend #%d: %s", backend.ID, err.Error())
+				return
+			}
+
+			switch responseMessage := backendResponse.(type) {
+			case *commonbackend.BackendStatusResponse:
+				if !responseMessage.IsRunning {
+					log.Errorf("Failed to start backend #%d: %s", backend.ID, responseMessage.Message)
+					return
+				}
+
+				log.Infof("Backend #%d has been reinitialized successfully", backend.ID)
+			}
+
+			log.Warnf("Backend #%d has reinitialized! Starting up auto-starting proxies...", backend.ID)
+
+			autoStartProxies := []dbcore.Proxy{}
+
+			if err := dbcore.DB.Where("backend_id = ? AND auto_start = true", backend.ID).Find(&autoStartProxies).Error; err != nil {
+				log.Errorf("Failed to query proxies to autostart: %s", err.Error())
+				return
+			}
+
+			for _, proxy := range autoStartProxies {
+				log.Infof("Starting up route #%d for backend #%d: %s", proxy.ID, backend.ID, proxy.Name)
+
+				marhalledCommand, err := commonbackend.Marshal("addProxy", &commonbackend.AddProxy{
+					Type:       "addProxy",
+					SourceIP:   proxy.SourceIP,
+					SourcePort: proxy.SourcePort,
+					DestPort:   proxy.DestinationPort,
+					Protocol:   proxy.Protocol,
+				})
+
+				if err != nil {
+					log.Errorf("Failed to marshal proxy adding request for backend #%d and route #%d: %s", proxy.BackendID, proxy.ID, err.Error())
+					continue
+				}
+
+				if _, err := conn.Write(marhalledCommand); err != nil {
+					log.Errorf("Failed to send proxy adding request for backend #%d and route #%d: %s", proxy.BackendID, proxy.ID, err.Error())
+					continue
+				}
+
+				_, backendResponse, err := commonbackend.Unmarshal(conn)
+
+				if err != nil {
+					log.Errorf("Failed to get response for backend #%d and route #%d: %s", proxy.BackendID, proxy.ID, err.Error())
+					continue
+				}
+
+				switch responseMessage := backendResponse.(type) {
+				case *commonbackend.ProxyStatusResponse:
+					if !responseMessage.IsActive {
+						log.Warnf("Failed to start proxy for backend #%d and route #%d", proxy.BackendID, proxy.ID)
+					}
+				default:
+					log.Errorf("Got illegal response type for backend #%d and proxy #%d: %T", proxy.BackendID, proxy.ID, responseMessage)
+					continue
+				}
+			}
+		}
+
 		err = backendInstance.Start()
 
 		if err != nil {
@@ -117,9 +208,8 @@ func apiEntrypoint(cCtx *cli.Context) error {
 			Arguments: backendParameters,
 		})
 
-		switch responseMessage := backendStartResponse.(type) {
-		case error:
-			log.Warnf("Failed to get response for backend #%d: %s", backend.ID, responseMessage.Error())
+		if err != nil {
+			log.Warnf("Failed to get response for backend #%d: %s", backend.ID, err.Error())
 
 			err = backendInstance.Stop()
 
@@ -128,6 +218,9 @@ func apiEntrypoint(cCtx *cli.Context) error {
 			}
 
 			continue
+		}
+
+		switch responseMessage := backendStartResponse.(type) {
 		case *commonbackend.BackendStatusResponse:
 			if !responseMessage.IsRunning {
 				err = backendInstance.Stop()

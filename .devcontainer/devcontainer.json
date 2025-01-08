@@ -13,16 +13,14 @@
   },
 
   // run arguments passed to docker
-  "runArgs": [
-    "--security-opt", "label=disable"
-  ],
+  "runArgs": ["--security-opt", "label=disable"],
 
   "containerEnv": {
-     // extensions to preload before other extensions
+    // extensions to preload before other extensions
     "PRELOAD_EXTENSIONS": "arrterian.nix-env-selector"
   },
 
-   // disable command overriding and updating remote user ID
+  // disable command overriding and updating remote user ID
   "overrideCommand": false,
   "userEnvProbe": "loginShell",
   "updateRemoteUserUID": false,
@@ -31,15 +29,11 @@
   "onCreateCommand": "nix-shell --command 'echo done building nix dev environment'",
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  "forwardPorts": [
-    3000
-  ],
+  "forwardPorts": [8000],
 
   "customizations": {
     "vscode": {
-      "extensions": [
-        "arrterian.nix-env-selector"
-      ]
+      "extensions": ["arrterian.nix-env-selector"]
     }
   }
 

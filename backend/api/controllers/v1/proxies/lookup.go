@@ -95,6 +95,8 @@ func LookupProxy(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Protocol specified in body must either be 'tcp' or 'udp'",
 			})
+
+			return
 		}
 	}
 

@@ -346,7 +346,7 @@ func Marshal(commandType string, command interface{}) ([]byte, error) {
 			return nil, fmt.Errorf("failed to typecast")
 		}
 
-		statusRequestBytes := make([]byte, 2)
+		statusRequestBytes := make([]byte, 1)
 		statusRequestBytes[0] = BackendStatusRequestID
 
 		return statusRequestBytes, nil

@@ -128,6 +128,8 @@ func GetConnections(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get status response from backend",
 		})
+
+		return
 	}
 
 	switch responseMessage := backendResponse.(type) {
