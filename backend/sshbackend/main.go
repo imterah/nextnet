@@ -266,10 +266,7 @@ func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveProxy) (bool, 
 	backend.arrayPropMutex.Lock()
 
 	for proxyIndex, proxy := range backend.proxies {
-		// Check if memory addresses are equal for the pointer
 		if command.SourceIP == proxy.SourceIP && command.SourcePort == proxy.SourcePort && command.DestPort == proxy.DestPort && command.Protocol == proxy.Protocol {
-			log.Debug("found proxy in StopProxy. shutting down listeners")
-
 			for _, listener := range proxy.Listeners {
 				err := listener.Close()
 
