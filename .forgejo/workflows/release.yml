@@ -34,7 +34,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build ./backend --tag ghcr.io/imterah/hermes:$GITHUB_REF_NAME
+          docker build . --tag ghcr.io/imterah/hermes:$GITHUB_REF_NAME
 
       - name: Upload Docker image
         run: |
