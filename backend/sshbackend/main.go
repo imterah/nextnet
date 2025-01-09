@@ -342,7 +342,7 @@ func (backend *SSHBackend) backendDisconnectHandler() {
 			}
 		}
 
-		log.Info("Disconnected from SSHBackend. Attempting to reconnect in 5 seconds...")
+		log.Info("Disconnected from the remote SSH server. Attempting to reconnect in 5 seconds...")
 
 		time.Sleep(5 * time.Second)
 
