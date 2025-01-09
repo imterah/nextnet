@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"git.terah.dev/imterah/hermes/backend/backendutil"
 	"git.terah.dev/imterah/hermes/backend/commonbackend"
@@ -84,6 +85,8 @@ func (backend *SSHBackend) StartBackend(bytes []byte) (bool, error) {
 	backend.conn = conn
 
 	log.Info("SSHBackend has initialized successfully.")
+	go backend.backendDisconnectHandler()
+
 	return true, nil
 }
 
@@ -139,6 +142,11 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 
 				if err != nil {
 					log.Warnf("failed to accept listener connection: %s", err.Error())
+
+					if err.Error() == "EOF" {
+						return
+					}
+
 					continue
 				}
 
@@ -321,6 +329,75 @@ func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *commonba
 
 	return &commonbackend.CheckParametersResponse{
 		IsValid: true,
+	}
+}
+
+func (backend *SSHBackend) backendDisconnectHandler() {
+	for {
+		if backend.conn != nil {
+			err := backend.conn.Wait()
+
+			if err == nil || err.Error() != "EOF" {
+				continue
+			}
+		}
+
+		log.Info("Disconnected from SSHBackend. Attempting to reconnect in 5 seconds...")
+
+		time.Sleep(5 * time.Second)
+
+		// Make the connection nil to accurately report our status incase GetBackendStatus is called
+		backend.conn = nil
+
+		// Use the last half of the code from the main initialization
+		signer, err := ssh.ParsePrivateKey([]byte(backend.config.PrivateKey))
+
+		if err != nil {
+			log.Errorf("Failed to parse private key: %s", err.Error())
+			return
+		}
+
+		auth := ssh.PublicKeys(signer)
+
+		config := &ssh.ClientConfig{
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			User:            backend.config.Username,
+			Auth: []ssh.AuthMethod{
+				auth,
+			},
+		}
+
+		conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", backend.config.IP, backend.config.Port), config)
+
+		if err != nil {
+			log.Errorf("Failed to connect to the server: %s", err.Error())
+			return
+		}
+
+		backend.conn = conn
+
+		log.Info("SSHBackend has reconnected successfully. Attempting to set up proxies again...")
+
+		for _, proxy := range backend.proxies {
+			ok, err := backend.StartProxy(&commonbackend.AddProxy{
+				SourceIP:   proxy.SourceIP,
+				SourcePort: proxy.SourcePort,
+				DestPort:   proxy.DestPort,
+				Protocol:   proxy.Protocol,
+			})
+
+			if err != nil {
+				log.Errorf("Failed to set up proxy: %s", err.Error())
+				continue
+			}
+
+			if !ok {
+				log.Errorf("Failed to set up proxy: OK status is false")
+				continue
+			}
+		}
+
+		log.Info("SSHBackend has reinitialized and restored state successfully.")
 	}
 }
 
