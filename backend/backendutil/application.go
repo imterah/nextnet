@@ -18,9 +18,14 @@ type BackendApplicationHelper struct {
 
 func (helper *BackendApplicationHelper) Start() error {
 	log.Debug("BackendApplicationHelper is starting")
+	err := configureAndLaunchBackgroundProfilingTasks()
+
+	if err != nil {
+		return err
+	}
+
 	log.Debug("Currently waiting for Unix socket connection...")
 
-	var err error
 	helper.socket, err = net.Dial("unix", helper.SocketPath)
 
 	if err != nil {
