@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+if [ ! -d "$HOME/go/bin" ]; then
+  mkdir ~/go/bin
+fi
+
+export PATH="$HOME/go/bin:$PATH"
+
 if [ ! -f "backend/.env" ]; then
   cp backend/dev.env backend/.env
 fi

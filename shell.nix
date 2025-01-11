@@ -2,10 +2,11 @@
   pkgs ? import <nixpkgs> { },
 }: pkgs.mkShell {
   buildInputs = with pkgs; [
-    # api/
+    # backend/
     nodejs
     go
     gopls
+    capnproto
   ];
 
   shellHook = ''

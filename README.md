@@ -13,11 +13,13 @@
 <h2 align="center">Local Development</h2>
 
 > [!NOTE]
-> Using [Nix](https://builtwithnix.org) is recommended for the development environment. If you're not using it, install Go. For legacy maintence tasks, install NodeJS.
+> Using [Nix](https://builtwithnix.org) is recommended for the development environment. If you're not using it, install Go.
 
-1. Firstly, check if you have a working Nix environment if you're using Nix.
+1. First off, clone the repository: `git clone --recurse-submodules https://git.terah.dev/imterah/hermes`
 
-2. Secondly, Run `nix-shell`, or alternatively `source init.sh` if you're not using Nix.
+2. Then, check if you have a working Nix environment if you're using Nix.
+
+3. Last, Run `nix-shell`, or alternatively `source init.sh` if you're not using Nix.
 
 <h3 align="center">API Development</h3>
 
