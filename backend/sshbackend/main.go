@@ -22,14 +22,14 @@ type SSHListener struct {
 	SourceIP   string
 	SourcePort uint16
 	DestPort   uint16
-	Protocol   string // Will be either 'tcp' or 'udp'
+	Protocol   commonbackend.Protocol
 	Listeners  []net.Listener
 }
 
 type SSHBackend struct {
 	config         *SSHBackendData
 	conn           *ssh.Client
-	clients        []*commonbackend.ProxyClientConnection
+	clients        []*commonbackend.Connection
 	proxies        []*SSHListener
 	arrayPropMutex sync.Mutex
 }
@@ -105,18 +105,31 @@ func (backend *SSHBackend) GetBackendStatus() (bool, error) {
 }
 
 func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, error) {
+	sourceIPBytes, err := command.SourceIP()
+
+	if err != nil {
+		return false, err
+	}
+
+	// YOLO.
+	sourceIP, err := commonbackend.IPBytesToIPSafe(sourceIPBytes)
+
+	if err != nil {
+		return false, err
+	}
+
 	listenerObject := &SSHListener{
-		SourceIP:   command.SourceIP,
-		SourcePort: command.SourcePort,
-		DestPort:   command.DestPort,
-		Protocol:   command.Protocol,
+		SourceIP:   sourceIP.String(),
+		SourcePort: command.SourcePort(),
+		DestPort:   command.DestPort(),
+		Protocol:   command.Protocol(),
 		Listeners:  []net.Listener{},
 	}
 
 	for _, ipListener := range backend.config.ListenOnIPs {
 		ip := net.TCPAddr{
 			IP:   net.ParseIP(ipListener),
-			Port: int(command.DestPort),
+			Port: int(command.DestPort()),
 		}
 
 		listener, err := backend.conn.ListenTCP(&ip)
@@ -158,7 +171,7 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 				}
 
 				clientIPAndPort := forwardedConn.RemoteAddr().String()
-				clientIP := clientIPAndPort[:strings.LastIndex(clientIPAndPort, ":")]
+				clientIPString := clientIPAndPort[:strings.LastIndex(clientIPAndPort, ":")]
 				clientPort, err := strconv.Atoi(clientIPAndPort[strings.LastIndex(clientIPAndPort, ":")+1:])
 
 				if err != nil {
@@ -166,16 +179,20 @@ func (backend *SSHBackend) StartProxy(command *commonbackend.AddProxy) (bool, er
 					continue
 				}
 
-				advertisedConn := &commonbackend.ProxyClientConnection{
-					SourceIP:   command.SourceIP,
-					SourcePort: command.SourcePort,
-					DestPort:   command.DestPort,
-					ClientIP:   clientIP,
-					ClientPort: uint16(clientPort),
+				clientIP, err := commonbackend.IPStringToIPBytes(clientIPString)
 
-					// FIXME (imterah): shouldn't protocol be in here?
-					// Protocol:   command.Protocol,
+				if err != nil {
+					log.Warnf("failed to parse client IP: %s", err.Error())
+					continue
 				}
+
+				advertisedConn := &commonbackend.Connection{}
+
+				advertisedConn.SetSourceIP(sourceIPBytes)
+				advertisedConn.SetSourcePort(command.SourcePort())
+				advertisedConn.SetDestPort(command.DestPort())
+				advertisedConn.SetClientIP(clientIP)
+				advertisedConn.SetClientPort(uint16(clientPort))
 
 				backend.arrayPropMutex.Lock()
 				backend.clients = append(backend.clients, advertisedConn)
@@ -278,7 +295,20 @@ func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveProxy) (bool, 
 	backend.arrayPropMutex.Lock()
 
 	for proxyIndex, proxy := range backend.proxies {
-		if command.SourceIP == proxy.SourceIP && command.SourcePort == proxy.SourcePort && command.DestPort == proxy.DestPort && command.Protocol == proxy.Protocol {
+		sourceIPBytes, err := command.SourceIP()
+
+		if err != nil {
+			log.Warnf("failed to get source IP: %s", err.Error())
+			continue
+		}
+
+		sourceIP, err := commonbackend.IPBytesToIPSafe(sourceIPBytes)
+
+		if err != nil {
+			log.Warnf("failed to get source IP: %s", err.Error())
+		}
+
+		if sourceIP.String() == proxy.SourceIP && command.SourcePort() == proxy.SourcePort && command.DestPort() == proxy.DestPort && command.Protocol() == proxy.Protocol {
 			for _, listener := range proxy.Listeners {
 				err := listener.Close()
 
@@ -299,44 +329,44 @@ func (backend *SSHBackend) StopProxy(command *commonbackend.RemoveProxy) (bool, 
 	return false, fmt.Errorf("could not find the proxy")
 }
 
-func (backend *SSHBackend) GetAllClientConnections() []*commonbackend.ProxyClientConnection {
+func (backend *SSHBackend) GetAllClientConnections() []*commonbackend.Connection {
 	defer backend.arrayPropMutex.Unlock()
 	backend.arrayPropMutex.Lock()
 
 	return backend.clients
 }
 
-func (backend *SSHBackend) CheckParametersForConnections(clientParameters *commonbackend.CheckClientParameters) *commonbackend.CheckParametersResponse {
-	if clientParameters.Protocol != "tcp" {
-		return &commonbackend.CheckParametersResponse{
+func (backend *SSHBackend) CheckParametersForConnections(clientParameters *commonbackend.CheckClientParameters) *backendutil.CheckParametersResponse {
+	if clientParameters.Protocol() != commonbackend.Protocol_tcp {
+		return &backendutil.CheckParametersResponse{
 			IsValid: false,
 			Message: "Only TCP is supported for SSH",
 		}
 	}
 
-	return &commonbackend.CheckParametersResponse{
+	return &backendutil.CheckParametersResponse{
 		IsValid: true,
 	}
 }
 
-func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *commonbackend.CheckParametersResponse {
+func (backend *SSHBackend) CheckParametersForBackend(arguments []byte) *backendutil.CheckParametersResponse {
 	var backendData SSHBackendData
 
 	if err := json.Unmarshal(arguments, &backendData); err != nil {
-		return &commonbackend.CheckParametersResponse{
+		return &backendutil.CheckParametersResponse{
 			IsValid: false,
 			Message: fmt.Sprintf("could not read json: %s", err.Error()),
 		}
 	}
 
 	if err := validator.New().Struct(&backendData); err != nil {
-		return &commonbackend.CheckParametersResponse{
+		return &backendutil.CheckParametersResponse{
 			IsValid: false,
 			Message: fmt.Sprintf("failed validation of parameters: %s", err.Error()),
 		}
 	}
 
-	return &commonbackend.CheckParametersResponse{
+	return &backendutil.CheckParametersResponse{
 		IsValid: true,
 	}
 }
@@ -388,12 +418,20 @@ func (backend *SSHBackend) backendDisconnectHandler() {
 		log.Info("SSHBackend has reconnected successfully. Attempting to set up proxies again...")
 
 		for _, proxy := range backend.proxies {
-			ok, err := backend.StartProxy(&commonbackend.AddProxy{
-				SourceIP:   proxy.SourceIP,
-				SourcePort: proxy.SourcePort,
-				DestPort:   proxy.DestPort,
-				Protocol:   proxy.Protocol,
-			})
+			sourceIP, err := commonbackend.IPStringToIPBytes(proxy.SourceIP)
+
+			if err != nil {
+				log.Warnf("Failed to parse IP address: %s", err.Error())
+			}
+
+			proxyStartCommand := &commonbackend.AddProxy{}
+
+			proxyStartCommand.SetSourceIP(sourceIP)
+			proxyStartCommand.SetSourcePort(proxy.SourcePort)
+			proxyStartCommand.SetDestPort(proxy.DestPort)
+			proxyStartCommand.SetProtocol(proxy.Protocol)
+
+			ok, err := backend.StartProxy(proxyStartCommand)
 
 			if err != nil {
 				log.Errorf("Failed to set up proxy: %s", err.Error())

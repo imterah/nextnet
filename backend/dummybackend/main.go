@@ -31,23 +31,23 @@ func (backend *DummyBackend) StopProxy(command *commonbackend.RemoveProxy) (bool
 	return true, nil
 }
 
-func (backend *DummyBackend) GetAllClientConnections() []*commonbackend.ProxyClientConnection {
-	return []*commonbackend.ProxyClientConnection{}
+func (backend *DummyBackend) GetAllClientConnections() []*commonbackend.Connection {
+	return []*commonbackend.Connection{}
 }
 
-func (backend *DummyBackend) CheckParametersForConnections(clientParameters *commonbackend.CheckClientParameters) *commonbackend.CheckParametersResponse {
+func (backend *DummyBackend) CheckParametersForConnections(clientParameters *commonbackend.CheckClientParameters) *backendutil.CheckParametersResponse {
 	// You don't have to specify Type and InReplyTo. Those will be handled for you.
 	// Message is optional.
-	return &commonbackend.CheckParametersResponse{
+	return &backendutil.CheckParametersResponse{
 		IsValid: true,
 		Message: "Valid!",
 	}
 }
 
-func (backend *DummyBackend) CheckParametersForBackend(arguments []byte) *commonbackend.CheckParametersResponse {
+func (backend *DummyBackend) CheckParametersForBackend(arguments []byte) *backendutil.CheckParametersResponse {
 	// You don't have to specify Type and InReplyTo. Those will be handled for you.
 	// Message is optional.
-	return &commonbackend.CheckParametersResponse{
+	return &backendutil.CheckParametersResponse{
 		IsValid: true,
 		Message: "Valid!",
 	}

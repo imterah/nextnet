@@ -229,6 +229,7 @@ func (runtime *Runtime) goRoutineHandler() error {
 							}
 						}
 					case *commonbackend.ProxyStatusRequest:
+						command.Message()
 						err := handleCommand("proxyStatusRequest", command, sock, messageData.Channel)
 
 						if err != nil {
