@@ -1,8 +1,10 @@
 # Go artifacts
+backend/api/api
 backend/sshbackend/sshbackend
 backend/dummybackend/dummybackend
+backend/sshappbackend/remote-code/bin
+backend/sshappbackend/local-code/sshappbackend
 backend/externalbackendlauncher/externalbackendlauncher
-backend/api/api
 frontend/frontend
 
 # Backup artifacts
