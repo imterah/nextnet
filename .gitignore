@@ -2,7 +2,7 @@
 backend/api/api
 backend/sshbackend/sshbackend
 backend/dummybackend/dummybackend
-backend/sshappbackend/remote-code/bin
+backend/sshappbackend/local-code/remote-bin
 backend/sshappbackend/local-code/sshappbackend
 backend/externalbackendlauncher/externalbackendlauncher
 frontend/frontend

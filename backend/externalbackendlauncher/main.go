@@ -21,11 +21,8 @@ type ProxyInstance struct {
 	Protocol   string `json:"protocol"`
 }
 
-type WriteLogger struct {
-	UseError bool
-}
+type WriteLogger struct{}
 
-// TODO: deprecate UseError switching
 func (writer WriteLogger) Write(p []byte) (n int, err error) {
 	logSplit := strings.Split(string(p), "\n")
 
@@ -34,11 +31,7 @@ func (writer WriteLogger) Write(p []byte) (n int, err error) {
 			continue
 		}
 
-		if writer.UseError {
-			log.Errorf("application: %s", line)
-		} else {
-			log.Infof("application: %s", line)
-		}
+		log.Infof("application: %s", line)
 	}
 
 	return len(p), err
@@ -242,13 +235,8 @@ func entrypoint(cCtx *cli.Context) error {
 
 	log.Debug("entering execution loop (in main goroutine)...")
 
-	stdout := WriteLogger{
-		UseError: false,
-	}
-
-	stderr := WriteLogger{
-		UseError: true,
-	}
+	stdout := WriteLogger{}
+	stderr := WriteLogger{}
 
 	for {
 		log.Info("starting process...")
